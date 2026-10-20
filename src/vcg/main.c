@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define da_append(xs, x)						\
 	do {								\
@@ -13,10 +14,6 @@
 		
 #define da_foreach(Type, it, da) for (Type *it = (da)->items; it < (da)->items + (da)->count; ++it)
 
-bool allocation_is_feasible(da_Buyer_t* B, da_Seller_t* S, Allocation* x);
-int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x);
-Allocation* vcg_optimal_welfare(da_Allocation_t xs);
-int net_traded_quantity(buyer* B, seller* S, Allocation x);
 
 
 /* the allocation matrix should look something like this:
@@ -34,33 +31,49 @@ typedef struct {
 
 typedef struct {
 	int id;
-	int d; // demand bounds
+	int d;     // demand bounds
         int theta; // valuation
+	float v;   // cost function multiplier
+	int utility;
 } Buyer;
 
 typedef struct {
 	int id;
-	int s; // capacity
-        int theta; // cost
+	int s;		// capacity
+        int theta;	// cost
+	float c;	// cost function multiplier
+	int utility;
 } Seller;
 
 typedef struct {
-	Allocation items*;
+	Allocation *items;
 	size_t count;
 	size_t capacity;
-} da_Allocation_t
+} da_Allocation_t;
 
 typedef struct {
-	Buyer items*;
+	Buyer *items;
 	size_t count;
 	size_t capacity;
-} da_Buyer_t
+} da_Buyer_t;
 
 typedef struct {
-	Seller items*;
+	Seller *items;
 	size_t count;
 	size_t capacity;
-} da_Seller_t
+} da_Seller_t;
+
+typedef struct {
+	float *items;
+	size_t count;
+	size_t capacity;
+} Valuations;
+
+void assign_agent_types(da_Buyer_t* B, da_Seller_t* S, Allocation* x);
+bool allocation_is_feasible(da_Buyer_t* B, da_Seller_t* S, Allocation* x);
+int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x);
+Allocation* vcg_optimal_welfare(da_Buyer_t* B, da_Seller_t* S, da_Allocation_t* xs);
+int net_traded_quantity(Buyer* B, Seller* S, Allocation x);
 
 int main(void)
 {
@@ -69,13 +82,11 @@ int main(void)
 }
 
 
-void Auction (buyer* B, seller* S, da_Allocation_t a, Valuations *v)
+void Auction (da_Buyer_t B, da_Seller_t S, da_Allocation_t a, Valuations *v)
 {
 	da_Allocation_t allo = {0};
-	int i = 0;
-	da_foreach(Allocation, A, &a)
-	{
-		if (allocation_is_feasible(B, S, A)) {da_append(&allo, A); a.items[i].id = i; i++;}
+	da_foreach(Allocation, A, &a){
+		if (allocation_is_feasible(&B, &S, A)) da_append(&allo, *A);
 	}
 }
 
@@ -92,17 +103,15 @@ bool allocation_is_feasible(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 {
 	for (int j = 0; j < B->count; j++)
 	{
-		for (int i = 0; i < S->count; i++)
-		{
-			if (x.matix[X.rows*i + j] > S->items[i].s) return false;
+		for (int i = 0; i < S->count; i++){
+			if (x->matrix[x->rows*i + j] > S->items[i].s) return false;
 		}
 	}
 
 	for (int i = 0; i < S->count; i++)
 	{
-		for (int j = 0; j < B->count; j++)
-		{
-			if (x.matix[X.rows*i + j] > B->items[i].d) return false;
+		for (int j = 0; j < B->count; j++){
+			if (x->matrix[x->rows*i + j] > B->items[i].d) return false;
 		}
 	}
 
@@ -121,23 +130,19 @@ int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 {
 	int rhs;
 	int lhs;
-	for (int j = 0; j < B->count; j++)
-	{
+	for (int j = 0; j < B->count; j++){
 		int tmp = 0;
-		for (int i = 0; i < S->count; i++)
-		{
-			tmp += x.matix[X.rows*i + j]
-				}
+		for (int i = 0; i < S->count; i++){
+			tmp += x->matrix[x->rows*i + j];
+		}
 		rhs += B->items[j].v * tmp;
 	}
-	for (int i = 0; i < S->count; i++)
-	{
+	for (int i = 0; i < S->count; i++){
 		int tmp = 0;
-		for (int j = 0; j < B->count; j++)
-		{
-			tmp += x.matix[X.rows*i + j];
+		for (int j = 0; j < B->count; j++){
+			tmp += x->matrix[x->rows*i + j];
 		}
-		lhs += S->items[j].c * tmp;
+		lhs += S->items[i].c * tmp;
 	}
 	return rhs - lhs;
 }
@@ -151,16 +156,16 @@ int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
   @param xs Dynamic array of feasible allocations.
   @return Pointer to allocation.
 */
-Allocation* vcg_optimal_welfare(da_Allocation_t xs)
+Allocation* vcg_optimal_welfare(da_Buyer_t* B, da_Seller_t* S, da_Allocation_t* xs)
 {
 	int prev_max, max_index, max;
 	prev_max = max_index = max = 0;
-	for (int i = 0; i < xs.count; i++){
+	for (int i = 0; i < xs->count; i++){
 		prev_max = max;
-		int tmp = vcg_social_welfare(xs.items[i]);
+		int tmp = vcg_social_welfare(B, S, &xs->items[i]);
 		if (tmp > max) {max = tmp; max_index = i;}
 	}
-	return xs.items[max_index];
+	return &xs->items[max_index];
 }
 
 /*net_traded_quantity
@@ -173,7 +178,7 @@ Allocation* vcg_optimal_welfare(da_Allocation_t xs)
 
   @return integer of the net traded quantity.
 */
-int net_traded_quantity(buyer* B, seller* S, Allocation x)
+int net_traded_quantity(Buyer* B, Seller* S, Allocation x)
 {
 	int h = x.rows;
 	int w = x.cols;
@@ -181,18 +186,24 @@ int net_traded_quantity(buyer* B, seller* S, Allocation x)
 
 	if (B != NULL){
 		for (int i = 0; i < x.rows; i++){
-			tmp += x.matrix[x.rows*i + B->id]
-				}
+			tmp += x.matrix[x.rows*i + B->id];
+		}
 	}
 	if (S != NULL){
 		for (int i = 0; i < x.cols; i++){
-			tmp += x.matrix[x.rows*S->id + i]
-				}
+			tmp += x.matrix[x.rows*S->id + i];
+		}
 	}
 	return tmp;
 }
 
-int agent_utility(buyer* B, seller* S, Allocation x)
+void assign_agent_types(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 {
-	x.matix[x.rows*i + j]; /* i is seller */
+	/* x->matix[x->rows*i + j]; /\* i is seller *\/ */
+	for (int i = 0; i < B->count; i++){
+	        B->items[i].theta = net_traded_quantity(&B->items[i], NULL, *x);
+	}
+	for (int i = 0; i < S->count; i++){
+		S->items[i].theta = net_traded_quantity(NULL, &S->items[i], *x);
+	}	
 }
