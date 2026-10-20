@@ -1,14 +1,14 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define da_append(xs, x)								\
-	do {										\
-	if ((xs)->count >= (xs)->capacity){						\
-	if ((xs)->capacity == 0) (xs)->capacity = 256;					\
-	else (xs)->capacity *= 2;							\
-	(xs)->items = realloc((xs)->items, (xs)->capacity*sizeof(*(xs)->items));	\
-	}										\
-	(xs)->items[(xs)->count++] = (x);						\
+#define da_append(xs, x)						\
+	do {								\
+		if ((xs)->count >= (xs)->capacity){			\
+			if ((xs)->capacity == 0) (xs)->capacity = 256;	\
+			else (xs)->capacity *= 2;			\
+			(xs)->items = realloc((xs)->items, (xs)->capacity*sizeof(*(xs)->items)); \
+		}							\
+		(xs)->items[(xs)->count++] = (x);			\
 	} while(0)									
 		
 #define da_foreach(Type, it, da) for (Type *it = (da)->items; it < (da)->items + (da)->count; ++it)
@@ -21,11 +21,11 @@ int net_traded_quantity(buyer* B, seller* S, Allocation x);
 
 /* the allocation matrix should look something like this:
 
-      b1  b2  b3
+   b1  b2  b3
    s1 1   0   2
    s2 4   4   4
    s2 8   1   3
- */
+*/
 typedef struct {
 	size_t rows;
 	size_t cols;
@@ -87,7 +87,7 @@ void Auction (buyer* B, seller* S, da_Allocation_t a, Valuations *v)
   @param S Array of Sellers
   @param x pointer to allocation matrix to be checked
   @return bool
- */
+*/
 bool allocation_is_feasible(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 {
 	for (int j = 0; j < B->count; j++)
@@ -116,7 +116,7 @@ bool allocation_is_feasible(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
   @param B da_Buyer_t Dynamic array of buyers
   @param S da_Seller_t Dynamic array of sellers
   @param x Allocation* Pointer to the allocation to calculate welfare for.
- */
+*/
 int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 {
 	int rhs;
@@ -127,7 +127,7 @@ int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 		for (int i = 0; i < S->count; i++)
 		{
 			tmp += x.matix[X.rows*i + j]
-		}
+				}
 		rhs += B->items[j].v * tmp;
 	}
 	for (int i = 0; i < S->count; i++)
@@ -150,7 +150,7 @@ int vcg_social_welfare(da_Buyer_t* B, da_Seller_t* S, Allocation* x)
 
   @param xs Dynamic array of feasible allocations.
   @return Pointer to allocation.
- */
+*/
 Allocation* vcg_optimal_welfare(da_Allocation_t xs)
 {
 	int prev_max, max_index, max;
@@ -172,7 +172,7 @@ Allocation* vcg_optimal_welfare(da_Allocation_t xs)
   @param x Relavent allocation matrix
 
   @return integer of the net traded quantity.
- */
+*/
 int net_traded_quantity(buyer* B, seller* S, Allocation x)
 {
 	int h = x.rows;
@@ -182,12 +182,12 @@ int net_traded_quantity(buyer* B, seller* S, Allocation x)
 	if (B != NULL){
 		for (int i = 0; i < x.rows; i++){
 			tmp += x.matrix[x.rows*i + B->id]
-		}
+				}
 	}
 	if (S != NULL){
 		for (int i = 0; i < x.cols; i++){
 			tmp += x.matrix[x.rows*S->id + i]
-		}
+				}
 	}
 	return tmp;
 }
