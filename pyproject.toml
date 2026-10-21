@@ -9,6 +9,8 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.156.6",
+    "geocoder>=1.38.1",
+    "pydantic>=2.14.1",
 ]
 
 [project.scripts]
@@ -17,3 +19,7 @@ cs-26-sw-7-04 = "cs_26_sw_7_04:main"
 [build-system]
 requires = ["uv_build>=0.12.21,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+package = false
+
