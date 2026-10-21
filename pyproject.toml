@@ -7,7 +7,9 @@ authors = [
     { name = "Tobias-vl", email = "tobias.lauritsen@hotmail.com" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.156.6",
+]
 
 [project.scripts]
 cs-26-sw-7-04 = "cs_26_sw_7_04:main"
