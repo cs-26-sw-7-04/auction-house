@@ -1,0 +1,17 @@
+[project]
+name = "cs-26-sw-7-04"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Tobias-vl", email = "tobias.lauritsen@hotmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+cs-26-sw-7-04 = "cs_26_sw_7_04:main"
+
+[build-system]
+requires = ["uv_build>=0.12.21,<0.13.0"]
+build-backend = "uv_build"
