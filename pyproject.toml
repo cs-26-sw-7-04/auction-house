@@ -1,25 +1,22 @@
 [project]
-name = "cs-26-sw-7-04"
+name = "routers"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Tobias-vl", email = "tobias.lauritsen@hotmail.com" }
+    { name = "Tobias-vl", email = "tobias.lauritsen@hotmail.com" },
+    { name = "naitsabot", email = "naitsabot@users.noreply.github.com" }
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "fastapi[standard]>=0.156.6",
+    "fastapi>=0.156.8",
     "geocoder>=1.38.1",
-    "pydantic>=2.14.1",
+    "uvicorn>=0.54.0",
 ]
 
 [project.scripts]
-cs-26-sw-7-04 = "cs_26_sw_7_04:main"
+routers = "routers.main:main"
 
 [build-system]
-requires = ["uv_build>=0.12.21,<0.13.0"]
+requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
-
-[tool.uv]
-package = false
-

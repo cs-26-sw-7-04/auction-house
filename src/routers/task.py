@@ -1,12 +1,12 @@
+import datetime
+
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
-import datetime
-import geocoder
 
 app = FastAPI()
 
 
-class resources_requirement(BaseModel):
+class ResourcesRequirement(BaseModel):
     single_thread: bool
     gpu_vram: int
     gpu_need: bool
@@ -14,9 +14,10 @@ class resources_requirement(BaseModel):
     flops: int
     storage: int
 
-class location(BaseModel):
+
+class Location(BaseModel):
     city: str | None = Field(
-        None, description="City wher the task giver is located"
+        None, description="City where the task giver is located"
     )
     state: str | None = Field(None, description="region")
     country: str | None = Field(None, description="country code")
@@ -25,15 +26,14 @@ class location(BaseModel):
     )
 
 
-
-class Auctiontask(BaseModel):
+class AuctionTask(BaseModel):
     task_type: str
     deadline: datetime.time
     playload_tag: str
     max_money_budget: int
-    resources_requirement
+    resources_requirement: ResourcesRequirement
     validation_method: str
-    location
+    location: Location
 
 
 @app.get("/")
@@ -42,5 +42,5 @@ async def root():
 
 
 @app.post("/task")
-async def ingest_task(task: Auctiontask):
+async def ingest_task(task: AuctionTask):
     return task
