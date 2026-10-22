@@ -5,7 +5,7 @@
 typedef struct {
 	int rows;
 	int cols;
-	double value[MAX_AGENTS][MAX_AGENTS];
+	int quantity[MAX_AGENTS][MAX_AGENTS];
 } Allocation;
 
 typedef struct {
@@ -37,3 +37,20 @@ typedef struct {
 } Optimum;
 
 
+double welfare(Buyers *buyers, Sellers* sellers, Allocation *x, Agent *excluded)
+{
+	double total = 0.0;
+
+	for (size_t i = 0; i < sellers->count; i++){
+		for (size_t j = 0; j < buyers->count; j++){
+			int q = x->quantity[i][j];
+
+			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;
+			bool exclude_seller = excluded != NULL && excluded->type == AGENT_SELLER && excluded->index == i;
+
+			if (!exclude_buyer) total  += q*buyers[j]->value;
+			if (!exclude_seller) total += q*seller[i]->value;
+		}
+	}
+	return total;
+}
