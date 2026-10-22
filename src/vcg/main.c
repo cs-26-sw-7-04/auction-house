@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <stdbool.h>
 #define MAX_AGENTS 8
 
 typedef struct {
@@ -9,13 +9,13 @@ typedef struct {
 } Allocation;
 
 typedef struct {
-	int count;
+	size_t count;
 	int demand[MAX_AGENTS];
 	double value[MAX_AGENTS];
 } Buyers;
 
 typedef struct {
-	int count;
+	size_t count;
 	int capacity[MAX_AGENTS];
 	double cost[MAX_AGENTS];
 } Sellers;
@@ -27,7 +27,7 @@ typedef enum {
 
 typedef struct {
 	Agent_type type;
-	int index;
+	size_t index;
 } Agent;
 
 typedef struct {
@@ -73,10 +73,10 @@ void enumerate(Search *search, size_t cell)
 {
 	int cols = search->buyers->count;
 	int rows = search->sellers->count;
-	int cell_count = cols * rows;
+	size_t cell_count = cols * rows;
 
-	int i = cell / cols;
-	int j = cell % cols;
+	size_t i = cell / cols;
+	size_t j = cell % cols;
 	if (cell == cell_count){
 		double w = welfare(search->buyers, search->sellers, &search->x, search->excluded);
 		if (!search->best.found == false || w > search->best.welfare){
