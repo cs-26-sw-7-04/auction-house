@@ -108,3 +108,16 @@ void enumerate(Search *search, size_t cell)
 
 	search->x.quantity[i][j] = 0;
 }
+
+Optimum optimize (Buyers* buyers, Sellers *sellers, Agent *excluded)
+{
+	Search search = {0};
+	search.buyers = buyers;
+	search.sellers = sellers;
+	search.excluded = excluded;
+	search.current.rows = sellers->count;
+	search.current.cols = buyers->count;
+
+	enumerate(&search, 0);
+	return search.best;
+}
