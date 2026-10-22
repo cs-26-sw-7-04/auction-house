@@ -1,24 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
-#define MAX_AGENTS 8
+#include "main.h"
 
-typedef struct {
-	int rows;
-	int cols;
-	int quantity[MAX_AGENTS][MAX_AGENTS];
-} Allocation;
-
-typedef struct {
-	size_t count;
-	int demand[MAX_AGENTS];
-	double value[MAX_AGENTS];
-} Buyers;
-
-typedef struct {
-	size_t count;
-	int capacity[MAX_AGENTS];
-	double cost[MAX_AGENTS];
-} Sellers;
 
 typedef enum {
 	AGENT_BUYER,
@@ -107,7 +90,8 @@ void enumerate(Search *search, size_t cell)
 		search->sellers_used[i] += k;
 		search->buyers_used[j] += k;
 
-		enumerate(search, cell + 1);
+		if (search->buyers_used[j] <= search->buyers->demand[j] && search->sellers_used[i] <= search->sellers->capacity[i])
+			enumerate(search, cell + 1);
 
 		search->sellers_used[i] -= k;
 		search->buyers_used[j] -= k;
@@ -139,23 +123,18 @@ double pivot_transfer(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agen
 	return wo - agentless.welfare;
 }
 
-typedef struct {
-	int buyer_index;
-	int seller_index;
-	double price;
-} auction_results;
-
-auction_results vcg_auction(Buyers buyers, Sellers sellers)
+Allocation vcg_auction(Buyers buyers, Sellers sellers)
 {
+	Allocation a = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
-		return (auction_results) {0};
+		return a;
 	}
 
 	Optimum result = optimize(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
-		return (auction_results){0};
+		return a;
 	}
 
 	
@@ -173,7 +152,27 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 					 &result.allocation, agent));
 	}
 
-	return (auction_results) {.buyer_index = result.buyer.index,
-		.seller_index = result.seller.index,
-		.price = result.allocation.quantity[result.seller.index][result.buyer.index]*buyers.value[result.buyer.index]};
+	return result.allocation;
+}
+
+
+void print_allocation(Allocation x)
+{
+	printf("+");
+	for (int i = 0; i < x.cols; i++){
+		printf("---");
+	}
+	printf("+\n");
+	for (int i = 0; i < x.rows; i++){
+		printf("|");
+		for (int j = 0; j < x.cols; j++){
+			printf(" %d ", x.quantity[i][j]);
+		}
+		printf("|\n");
+	}
+	printf("+");
+	for (int i = 0; i < x.cols; i++){
+		printf("---");
+	}
+	printf("+\n");
 }
