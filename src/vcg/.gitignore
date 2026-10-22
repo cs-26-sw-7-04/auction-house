@@ -1,0 +1,5 @@
+tests/test
+tests/test.c
+tests/gentest
+# Object files
+*.o
