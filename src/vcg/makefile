@@ -12,7 +12,7 @@ main: vcg.c vcg.h
 	rm $(BUILD_DIR)/vcg.o
 	cp vcg.h $(BUILD_DIR)/include/vcg.h
 .PHONY: test
-test: $(TEST_DIR)/gentest.c main $(wildcard $(TEST_DIR)/*.h)
+test: $(TEST_DIR)/gentest.c main_debug $(wildcard $(TEST_DIR)/*.h)
 	$(CC) $(CFLAGS) $(TEST_DIR)/gentest.c $(OBJ) -o $(TEST_DIR)/gentest
 	./$(TEST_DIR)/gentest  $(TEST_DIR) $(TEST_DIR)/test.c $(filter-out $(TEST_DIR)/test_utils.h,$(wildcard $(TEST_DIR)/*.h))
 	$(CC) $(CFLAGS) -ggdb $(TEST_DIR)/test.c $(OBJ) -o $(TEST_DIR)/test
@@ -20,3 +20,9 @@ test: $(TEST_DIR)/gentest.c main $(wildcard $(TEST_DIR)/*.h)
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) $(TEST_DIR)/test $(TEST_DIR)/gentest
+main_debug: vcg.c vcg.h
+	mkdir -p build build/include build/lib
+	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -ggdb -fPIC -c vcg.c
+	$(CC) $(BUILD_DIR)/vcg.o -shared -o $(BUILD_DIR)/lib/libvcg.so
+	rm $(BUILD_DIR)/vcg.o
+	cp vcg.h $(BUILD_DIR)/include/vcg.h
