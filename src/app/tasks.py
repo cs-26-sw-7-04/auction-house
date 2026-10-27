@@ -37,24 +37,18 @@ class ResourcesRequirement(BaseModel):
         return self
 
 
-class Location(BaseModel):
-    """Optional locality information about the task :3"""
-    city: str | None = Field(None, description="City where the task giver is located")
-    state: str | None = Field(None, description="Region")
-    country: str | None = Field(None, description="Country code")
-    coordinates: tuple[float, float] | None = Field(
-        None, description="(Latitude, Longitude)"
-    )
-
-
-class ValidationMethod(str, enum.Enum):
+class VerificationMethod(enum.StrEnum):
     """How the auction house verifies a completed task."""
     HASH = "hash"
     TIMEOUT_ONLY = "timeout_only"
     #TRUST_ME = "trust_me" #bro
 
 
-class TaskStatus(str, enum.Enum):
+class TaskType(enum.StrEnum):
+    DETERMINISTIC_SODUKU = "sudoku"
+
+
+class TaskStatus(enum.StrEnum):
     """Task lifecycle :3"""
     PENDING     = "pending"
     IN_AUCTION  = "in_auction"
@@ -66,16 +60,19 @@ class TaskStatus(str, enum.Enum):
     FAILED      = "failed"
 
 
-class Task(BaseModel):
-    """A task as submitted by the task submitter :3"""
-    task_type: str
+class TaskSpec(BaseModel):
+    """The task definition, without time-dependent checks"""
+    task_type: TaskType
     deadline: UtcDatetime = Field(description="Converted to UTC, must be in the future")
     payload_tag: str = Field(description="URI or URL for the payload container")
     max_money_budget: int = Field(gt=0, description="Maximum payment")
     resources_requirement: ResourcesRequirement
-    validation_method: ValidationMethod
-    location: Location
+    verification_method: VerificationMethod
+    expected_result_hash: str | None = Field(None, pattern=r"^[0-9a-f]{64}$")
 
+
+class Task(TaskSpec):
+    """What the submitter sends. Only this is checked against 'now' :3"""
     @field_validator("deadline")
     @classmethod
     def deadline_in_future(cls, value: datetime.datetime):
@@ -84,13 +81,21 @@ class Task(BaseModel):
             raise ValueError("deadline must be in the future")
         return value
 
+    @model_validator(mode="after")
+    def check_verification(self):
+        """:3"""
+        if (self.verification_method is VerificationMethod.HASH
+                and self.expected_result_hash is None):
+            raise ValueError("expected_result_hash is required for hash verification")
+        return self
+
 
 class TaskRecord(BaseModel):
     """A stored task with auction house state :3"""
     task_id: uuid.UUID
     status: TaskStatus
     submitted_at: UtcDatetime
-    task: Task
+    task: TaskSpec
 
 
 tasks: dict[uuid.UUID, TaskRecord] = {} # in memory, as we have no DB right now
@@ -114,20 +119,6 @@ def get_record(task_id: uuid.UUID) -> TaskRecord:
     if record is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return record
-
-
-""" 
-def loopup_location(ip:str ) -> Location | None:
-    g = geocoder.ip(ip)
-    if not g.ok:
-        return None
-    return Location(
-        city = g.city,
-        state = g.state,
-        country = g.country,
-        coordinates = g.coordinates,
-    )
-"""
 
 
 @app.get("/")
