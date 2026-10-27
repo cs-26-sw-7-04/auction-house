@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include "main.h"
+#include "vcg.h"
 
 
 typedef enum {

@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include "test_utils.h"
-#include "../main.h"
+#include "../build/include/vcg.h"
 
 
 
