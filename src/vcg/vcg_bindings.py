@@ -1,6 +1,6 @@
 import ctypes
 so_file = "./build/lib/libvcg.so"
-MAX_AGENTS = 8
+MAX_AGENTS = 512
 
 vcglib = ctypes.CDLL(so_file)
 
