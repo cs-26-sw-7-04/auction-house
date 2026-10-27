@@ -1,4 +1,4 @@
-#define MAX_AGENTS 512
+#define MAX_AGENTS 32
 #include <stddef.h>
 
 typedef struct {
