@@ -3,11 +3,13 @@ CC = gcc
 TEST_DIR = ./tests
 BUILD_DIR = ./build
 OBJ =  $(wildcard $(BUILD_DIR)/lib/*.so)
-
+PROCS != nproc
+THREADS_PER_CORE = 2
+AVAIL_THREADS = $$(($(PROCS) * $(THREADS_PER_CORE)))
 
 main: vcg.c vcg.h
 	mkdir -p build build/include build/lib
-	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -fPIC -c vcg.c
+	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -fPIC -c vcg.c -DPROCS=$(AVAIL_THREADS) -lpthread
 	$(CC) $(BUILD_DIR)/vcg.o -shared -o $(BUILD_DIR)/lib/libvcg.so
 	rm $(BUILD_DIR)/vcg.o
 	cp vcg.h $(BUILD_DIR)/include/vcg.h
@@ -22,7 +24,7 @@ clean:
 	rm -rf $(BUILD_DIR) $(TEST_DIR)/test $(TEST_DIR)/gentest
 main_debug: vcg.c vcg.h
 	mkdir -p build build/include build/lib
-	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -ggdb -fPIC -c vcg.c
+	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -ggdb -fPIC -c vcg.c -DPROCS=$(AVAIL_THREADS) -lpthread
 	$(CC) $(BUILD_DIR)/vcg.o -shared -o $(BUILD_DIR)/lib/libvcg.so
 	rm $(BUILD_DIR)/vcg.o
 	cp vcg.h $(BUILD_DIR)/include/vcg.h

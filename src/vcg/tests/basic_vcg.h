@@ -1,5 +1,7 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include "test_utils.h"
 #include "../build/include/vcg.h"
@@ -84,64 +86,50 @@ TEST stress_test()
 	return result;
 }
 
+static double elapsed_seconds(struct timespec start, struct timespec end)
+{
+    return (double)(end.tv_sec - start.tv_sec) +
+           (double)(end.tv_nsec - start.tv_nsec) / 1e9;
+}
 
 TEST time_test()
 {
 	Buyers B = {0};
 	Sellers S = {0};
-	clock_t start;
-	clock_t end;
-	clock_t dif;
 	Allocation ar;
-	for (int i = 0; i < MAX_AGENTS; i++){
-		S.capacity[i] = i % 20;
-		S.cost[i]     = i % 4;
-		B.demand[i] = i % 2;
-		B.value[i]  = i %5;
+
+
+	srand((unsigned)time(NULL));
+	
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		S.capacity[i] = rand() % 2;
+		S.cost[i]     = rand() % 10; 
+		B.demand[i]   = rand() % 10; 
+		B.value[i]    = rand() % 10; 
 	}
 
+	for (int i = 1; i < 32; i ++){
+		B.count = i;
+		S.count = i;
 
-	B.count = MAX_AGENTS/8;
-	S.count = MAX_AGENTS/8;
-	start = clock();
-	ar = vcg_auction(B, S);
-	end = clock();
-	print_allocation(ar);
-	dif = end - start;
-	printf("time taken: %ld seconds\n  (agents %d)", dif / (CLOCKS_PER_SEC), MAX_AGENTS/8);
+		struct timespec start, end;
 
-
-	B.count = MAX_AGENTS/4;
-	S.count = MAX_AGENTS/4;
-	start = clock();
-	ar = vcg_auction(B, S);
-	end = clock();
-	print_allocation(ar);
-	dif = end - start;
-	printf("time taken: %ld seconds (agents %d)\n", dif / (CLOCKS_PER_SEC), MAX_AGENTS/4);
-	
-
-	B.count = MAX_AGENTS/2;
-	S.count = MAX_AGENTS/2;
-
-	start = clock();
-	ar = vcg_auction(B, S);
-	end = clock();
-	print_allocation(ar);
-	dif = end - start;
-	printf("time taken: %ld seconds (agents %d)\n", dif / (CLOCKS_PER_SEC), MAX_AGENTS/2);
-
-	B.count = MAX_AGENTS;
-	S.count = MAX_AGENTS;
-
-	start = clock();
-	ar = vcg_auction(B, S);
-	end = clock();
-	print_allocation(ar);
-	dif = end - start;
-	printf("time taken: %ld seconds (agents %d)\n", dif / (CLOCKS_PER_SEC), MAX_AGENTS);
-
-
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		ar = vcg_auction(B, S);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double time1 = elapsed_seconds(start, end);
+		print_allocation(ar);
+		printf("time taken: %lf seconds (agents %d)\n",time1, i);
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		ar = vcg_auction_multithreaded(B, S);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double time2 = elapsed_seconds(start, end);
+		print_allocation(ar);
+		printf("time taken (multithreaded): %lf seconds (agents %d)\n",time2, i);
+		double delta = time2-time1;
+		printf("time delta: %lf seconds\n", delta);
+		
+	}
 
 	return true;
 
