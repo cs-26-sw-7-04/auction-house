@@ -1,9 +1,11 @@
+""":3"""
 import uvicorn
 
-from routers.task import app
+from app.tasks import app
 
 
 def main():
+    """:3"""
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
 

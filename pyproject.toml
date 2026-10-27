@@ -1,5 +1,5 @@
 [project]
-name = "routers"
+name = "app"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -15,8 +15,32 @@ dependencies = [
 ]
 
 [project.scripts]
-routers = "routers.main:main"
+app = "app.main:main"
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff.lint]
+ignore = ["UP017"]
+extend-exclude = ["tests"]
+
+[tool.pylint.main]
+disable = [
+    "fixme",
+    "missing-module-docstring",
+    "missing-class-docstring",
+    #"missing-function-docstring",
+    "W0105",
+]
+ignore-paths = ["^tests/"]
