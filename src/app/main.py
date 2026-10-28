@@ -8,15 +8,14 @@ from app.routes import assignments, auctions, bidders, miscellaneous, tasks
 
 app = FastAPI(title="Auction House")
 
+app.include_router(assignments.router)#, prefix="/api/v1")
+app.include_router(auctions.router)#, prefix="/api/v1")
+app.include_router(tasks.router)#, prefix="/api/v1")
+app.include_router(miscellaneous.router)#, prefix="/api/v1")
+app.include_router(bidders.router)#, prefix="/api/v1")
 
 def main():
     """:3"""
-    app.include_router(assignments.router)#, prefix="/api/v1")
-    app.include_router(auctions.router)#, prefix="/api/v1")
-    app.include_router(tasks.router)#, prefix="/api/v1")
-    app.include_router(miscellaneous.router)#, prefix="/api/v1")
-    app.include_router(bidders.router)#, prefix="/api/v1")
-
     # Inside a Kubernetes pod the API needs to bind to 0.0.0.0.
     # Read host and port from the environment
     uvicorn.run(
