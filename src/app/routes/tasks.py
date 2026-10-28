@@ -3,7 +3,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException
 
-from app.models import *
+from app.models.taskmodel import *
 
 router = APIRouter(
     prefix="/tasks",

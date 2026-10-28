@@ -5,6 +5,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.routes import assignments, auctions, bidders, miscellaneous, tasks
+from .state import *
 
 app = FastAPI(title="Auction House")
 
