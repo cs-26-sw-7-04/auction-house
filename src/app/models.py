@@ -4,10 +4,8 @@ import enum
 import uuid
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
 from pydantic import AfterValidator, BaseModel, Field, field_validator, model_validator
-
-app = FastAPI(title="Auction House API")
 
 
 def to_utc(value: datetime.datetime) -> datetime.datetime:
@@ -38,7 +36,8 @@ class ResourcesRequirement(BaseModel):
 
 
 class VerificationMethod(enum.StrEnum):
-    """How the auction house verifies a completed task."""
+    """How the auction house verifies a completed task :3"""
+    NO_VERIFICATION = "no"
     HASH = "hash"
     TIMEOUT_ONLY = "timeout_only"
     #TRUST_ME = "trust_me" #bro
@@ -118,48 +117,4 @@ def get_record(task_id: uuid.UUID) -> TaskRecord:
     record = tasks.get(task_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return record
-
-
-@app.get("/")
-async def root():
-    """:3"""
-    return {"message": "Hello World"}
-
-@app.get("/health")
-async def health():
-    """:3"""
-    return {"status": "ok"}
-
-@app.get("/ping")
-async def ping():
-    """:3"""
-    return {"message": "pong", "status": "ok"}
-
-
-@app.post("/tasks", status_code=201)
-async def ingest_task(task: Task) -> TaskRecord:
-    """Submit a single task for auction :3"""
-    return store_task(task)
-
-
-@app.post("/tasks/batch", status_code=201)
-async def ingest_tasks(batch: list[Task]) -> list[TaskRecord]:
-    """Submit several tasks at once :3"""
-    return [store_task(task) for task in batch]
-
-
-@app.get("/tasks/{task_id}")
-async def get_task(task_id: uuid.UUID) -> TaskRecord:
-    """Get the status of a task :3"""
-    return get_record(task_id)
-
-
-@app.get("/tasks/{task_id}/result")
-async def get_task_result(task_id: uuid.UUID) -> TaskRecord:
-    """Get the result of a completed task :DDDD"""
-    record = get_record(task_id)
-    if record.status != TaskStatus.COMPLETED:
-        raise HTTPException(status_code=409, detail="Task is not completed")
-    # TODO: return the stored result once result storage exists in some form.
     return record

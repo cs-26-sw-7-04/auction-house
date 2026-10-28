@@ -1,4 +1,4 @@
 Run main:
 ```bash
-uv run routers
+uv run app
 ```
