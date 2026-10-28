@@ -28,4 +28,5 @@ typedef struct {
 
 Allocation vcg_auction(Buyers buyers, Sellers sellers);
 Allocation vcg_auction_multithreaded(Buyers buyers, Sellers sellers);
+Allocation vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha);
 void print_allocation(Allocation x);

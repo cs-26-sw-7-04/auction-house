@@ -82,7 +82,6 @@ TEST stress_test()
 	if (ar.rows != 1 || ar.cols != 9)
 		result = false;
 
-	print_allocation(ar);
 	return result;
 }
 
@@ -97,18 +96,25 @@ TEST time_test()
 	Buyers B = {0};
 	Sellers S = {0};
 	Allocation ar;
+	char* filepath = "Time_test_output.csv";
 
+	FILE * output_data = fopen(filepath, "w");
+	if (output_data == NULL){
+		fprintf(stderr, "failed to open or create file: %sn\n", filepath);
+		return false;
+	}
 
+	fprintf(output_data, "Agents, time1, time2, delta1, time3, delta2\n");
 	srand((unsigned)time(NULL));
 	
 	for (int i = 0; i < MAX_AGENTS; i++) {
-		S.capacity[i] = 1 + rand() % 10;
-		S.cost[i]     = 1 + rand() % 10; 
-		B.demand[i]   = 1 + rand() % 10; 
-		B.value[i]    = 1 + rand() % 10; 
+		S.capacity[i] = 1 + rand() % 9;
+		S.cost[i]     = 1 + rand() % 9;
+		B.demand[i]   = 1 + rand() % 9; 
+		B.value[i]    = 1 + rand() % 9; 
 	}
 
-	for (int i = 1; i < 32; i ++){
+	for (int i = 1; i < 6; i ++){
 		B.count = i;
 		S.count = i;
 
@@ -126,11 +132,20 @@ TEST time_test()
 		double time2 = elapsed_seconds(start, end);
 		print_allocation(ar);
 		printf("time taken (multithreaded): %lf seconds (agents %d)\n",time2, i);
-		double delta = time2-time1;
-		printf("time delta: %lf seconds\n", delta);
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		float approximation_percent = 90.0f;
+		ar = vcg_auction_approximation(B, S, approximation_percent);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double time3 = elapsed_seconds(start, end);
+		printf("time taken (Approximation): %lf seconds (agents %d)\n",time3, i);
+		double delta1 = time2-time1;
+		double delta2 = time3-time1;
+
+		printf("time delta: %lf seconds\n", delta1);
+		fprintf(output_data, "%d,%lf,%lf,%lf,%lf,%lf\n", i, time1, time2, delta1, time3, delta2);
 		
 	}
-
+	fclose(output_data);
 	return true;
 
 }

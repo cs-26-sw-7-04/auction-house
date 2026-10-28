@@ -201,7 +201,7 @@ void enumerate_multithreaded(Search *search, size_t cell)
 	int remaining_seller = search->sellers->capacity[i] - search->sellers_used[i];
 	
 	int limit = remaining_buyer < remaining_seller ? remaining_buyer : remaining_seller;
-	if (limit + 1 < PROCS*2){
+	if (remaining_buyer > PROCS || remaining_seller > PROCS){
 		enumerate(search, cell);
 		return;
 	}
@@ -329,4 +329,13 @@ Allocation vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 	/* } */
 
 	return result.allocation;
+}
+
+Allocation vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha)
+{
+	(void) buyers;
+	(void) sellers;
+	(void) alpha;
+	Allocation a = {0};
+	return a;
 }
