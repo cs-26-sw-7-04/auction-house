@@ -102,10 +102,10 @@ TEST time_test()
 	srand((unsigned)time(NULL));
 	
 	for (int i = 0; i < MAX_AGENTS; i++) {
-		S.capacity[i] = rand() % 2;
-		S.cost[i]     = rand() % 10; 
-		B.demand[i]   = rand() % 10; 
-		B.value[i]    = rand() % 10; 
+		S.capacity[i] = 1 + rand() % 10;
+		S.cost[i]     = 1 + rand() % 10; 
+		B.demand[i]   = 1 + rand() % 10; 
+		B.value[i]    = 1 + rand() % 10; 
 	}
 
 	for (int i = 1; i < 32; i ++){
