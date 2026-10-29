@@ -14,7 +14,7 @@ def annoucement_subscribers():
 @router.post("/subscribe")
 def subscribe(bidder: Bidder, subscibers: list = Depends(get_subscribers_list)):
     subscibers.append(bidder)
-    return{"message": "Bidder subscribed successfully", "current_count": len(get_subscribers_list)}
+    return{"message": "Bidder subscribed successfully"}
 
 @router.get("/subscribers")
 def subscripbers(subscribers: list = Depends(get_subscribers_list)):
