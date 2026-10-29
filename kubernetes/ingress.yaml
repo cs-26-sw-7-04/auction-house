@@ -1,5 +1,3 @@
-#Placeholder for the yaml file for our ingress api rouders.
-
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
