@@ -40,7 +40,7 @@ deploy: load         ## Build, import and deploy the auction service
 # simulator-up:        ## Start the bidder simulator
 # 	docker build -t $(SIM_IMAGE):$(TAG) ./simulator
 # 	k3d image import $(SIM_IMAGE):$(TAG) -c $(CLUSTER)
-# 	kubectl apply -f k8s/simulator/
+# 	kubectl apply -f kubernetes/bidder_simulator/
 
 # simulator-down:      ## Stop the bidder simulator
 # 	kubectl delete -f k8s/simulator/ --ignore-not-found
