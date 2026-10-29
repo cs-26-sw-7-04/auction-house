@@ -5,7 +5,7 @@ def parent(path):
     return pathlib.Path(path).parent.resolve()
 
 so_file = f"{parent(__file__)}/build/lib/libvcg.so"
-MAX_AGENTS = 512
+MAX_AGENTS = 32
 
 vcglib = ctypes.CDLL(so_file)
 
