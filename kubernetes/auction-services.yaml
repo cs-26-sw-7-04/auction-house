@@ -1,0 +1,11 @@
+FROM 
+
+WORKDIR 
+
+ENV 
+
+RUN 
+
+COPY
+
+RUN pip install -r requirements.txt
