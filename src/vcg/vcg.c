@@ -131,32 +131,39 @@ double pivot_transfer(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agen
 	return wo - agentless.welfare;
 }
 
-Allocation vcg_auction(Buyers buyers, Sellers sellers)
+auction_results vcg_auction(Buyers buyers, Sellers sellers)
 {
-	Allocation a = {0};
+	auction_results ar = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
-		return a;
+		return ar;
 	}
 
 	Optimum result = optimize(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
-		return a;
+		return ar;
 	}
 
-	
-	/* for (size_t j = 0; j < buyers.count; ++j) { */
-	/* 	Agent agent = { .type = AGENT_BUYER, .index = j }; */
-	/* 	pivot_transfer(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
-
+	double *prices = malloc(sizeof(double) * buyers.count);
+	for (size_t j = 0; j < buyers.count; ++j) {
+		prices[j] = 0;
+		for (size_t k = 0; k < sellers.count; k++){
+			if (result.allocation.quantity[k][j]){
+				Agent agent = { .type = AGENT_BUYER, .index = j };
+				prices[j] = pivot_transfer(&buyers, &sellers, &result.allocation, agent);
+			}
+		}
+	}
 	/* for (size_t i = 0; i < sellers.count; ++i) { */
 	/* 	Agent agent = { .type = AGENT_SELLER, .index = i }; */
-	/* 	pivot_transfer(&buyers, &sellers, &result.allocation, agent); */
+	/* 	pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent); */
 	/* } */
+	
+	ar.buyer_payments = prices;
+	ar.allocation = result.allocation;
 
-	return result.allocation;
+	return ar;
 }
 
 
@@ -292,7 +299,7 @@ Optimum optimize_multithreaded (Buyers* buyers, Sellers *sellers, Agent *exclude
 
 double pivot_transfer_multithreaded(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agent removed)
 {
-	double wo = welfare(buyers, sellers, chosen, &removed);
+	double wo = welfare(buyers, sellers, chosen, NULL);
 	Optimum agentless = optimize_multithreaded(buyers, sellers, &removed);
 
 	if (!agentless.found) return 0.0;
@@ -301,41 +308,48 @@ double pivot_transfer_multithreaded(Buyers* buyers, Sellers *sellers, Allocation
 }
 
 
-Allocation vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
+auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 {
 	int procs = (int) PROCS;
 	printf("PROCS: %d\n",procs);
-	Allocation a = {0};
+	auction_results ar = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
-		return a;
+		return ar;
 	}
 
 	Optimum result = optimize_multithreaded(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
-		return a;
+		return ar;
 	}
 
-	
-	/* for (size_t j = 0; j < buyers.count; ++j) { */
-	/* 	Agent agent = { .type = AGENT_BUYER, .index = j }; */
-	/* 	pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
-
+	double *prices = malloc(sizeof(double) * buyers.count);
+	for (size_t j = 0; j < buyers.count; ++j) {
+		prices[j] = 0;
+		for (size_t k = 0; k < sellers.count; k++){
+			if (result.allocation.quantity[k][j]){
+				Agent agent = { .type = AGENT_BUYER, .index = j };
+				prices[j] = pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent);
+			}
+		}
+	}
 	/* for (size_t i = 0; i < sellers.count; ++i) { */
 	/* 	Agent agent = { .type = AGENT_SELLER, .index = i }; */
 	/* 	pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent); */
 	/* } */
+	
+	ar.buyer_payments = prices;
+	ar.allocation = result.allocation;
 
-	return result.allocation;
+	return ar;
 }
 
-Allocation vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha)
+auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha)
 {
 	(void) buyers;
 	(void) sellers;
 	(void) alpha;
-	Allocation a = {0};
-	return a;
+	auction_results ar = {0};
+	return ar;
 }

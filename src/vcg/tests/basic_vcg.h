@@ -35,10 +35,10 @@ TEST basic_vcg_test_1()
 	S.capacity[0] = 2;
 	S.cost[0]     = 1;
 
-	Allocation ar = vcg_auction(B,S);
-	if (ar.rows == 0 || ar.cols == 0)
+	auction_results ar = vcg_auction(B,S);
+	if (ar.allocation.rows == 0 || ar.allocation.cols == 0)
 		result = false;
-	if (ar.rows != 1 || ar.cols != 3)
+	if (ar.allocation.rows != 1 || ar.allocation.cols != 3)
 		result = false;
 	return result;
 }
@@ -74,16 +74,62 @@ TEST stress_test()
 	S.capacity[0] = 2;
 	S.cost[0]     = 1;
 
-	Allocation ar = vcg_auction(B,S);
-	if (ar.rows == 0 || ar.cols == 0){
-		printf("ar.rows: %d ar.cols: %d\n", ar.rows, ar.cols);
+	auction_results ar = vcg_auction(B,S);
+	if (ar.allocation.rows == 0 || ar.allocation.cols == 0){
+		printf("ar.rows: %d ar.cols: %d\n", ar.allocation.rows, ar.allocation.cols);
 		result = false;
 	}
-	if (ar.rows != 1 || ar.cols != 9)
+	if (ar.allocation.rows != 1 || ar.allocation.cols != 9)
 		result = false;
 
 	return result;
 }
+
+TEST stress_test_multithreaded()
+{
+	bool result = true;
+	
+
+	Buyers B = {0};
+	B.count = 9;
+	B.demand[0] = 1;
+	B.demand[1] = 1;
+	B.demand[2] = 2;
+	B.demand[3] = 1;
+	B.demand[4] = 1;
+	B.demand[5] = 1;
+	B.demand[6] = 2;
+	B.demand[7] = 1;
+	B.demand[8] = 2;
+	B.value[0]  = 5;
+	B.value[1]  = 2;
+	B.value[2]  = 3;
+	B.value[3]  = 5;
+	B.value[4]  = 5;
+	B.value[5]  = 2;
+	B.value[6]  = 3;
+	B.value[7]  = 2;
+	B.value[8]  = 3;
+
+	Sellers S = {0};
+	S.count       = 2;
+	S.capacity[0] = 2;
+	S.cost[0]     = 1;
+	S.capacity[1] = 2;
+	S.cost[1]     = 1;
+
+	auction_results ar = vcg_auction_multithreaded(B,S);
+	print_allocation(ar.allocation);
+	if (ar.allocation.rows == 0 || ar.allocation.cols == 0){
+		printf("ar.allocation.rows: %d ar.allocation.cols: %d\n", ar.allocation.rows, ar.allocation.cols);
+		result = false;
+	}
+	if (ar.allocation.rows != 2 || ar.allocation.cols != 9)
+		result = false;
+
+	return result;
+}
+
 
 static double elapsed_seconds(struct timespec start, struct timespec end)
 {
@@ -95,7 +141,7 @@ TEST time_test()
 {
 	Buyers B = {0};
 	Sellers S = {0};
-	Allocation ar;
+	auction_results ar;
 	char* filepath = "Time_test_output.csv";
 
 	FILE * output_data = fopen(filepath, "w");
@@ -109,7 +155,7 @@ TEST time_test()
 	
 	for (int i = 0; i < MAX_AGENTS; i++) {
 		S.capacity[i] = 1 + rand() % 9;
-		S.cost[i]     = 1 + rand() % 9;
+		S.cost[i]     = 0; //1 + rand() % 9;
 		B.demand[i]   = 1 + rand() % 9; 
 		B.value[i]    = 1 + rand() % 9; 
 	}
@@ -124,13 +170,13 @@ TEST time_test()
 		ar = vcg_auction(B, S);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time1 = elapsed_seconds(start, end);
-		print_allocation(ar);
+		print_allocation(ar.allocation);
 		printf("time taken: %lf seconds (agents %d)\n",time1, i);
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		ar = vcg_auction_multithreaded(B, S);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time2 = elapsed_seconds(start, end);
-		print_allocation(ar);
+		print_allocation(ar.allocation);
 		printf("time taken (multithreaded): %lf seconds (agents %d)\n",time2, i);
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		float approximation_percent = 90.0f;

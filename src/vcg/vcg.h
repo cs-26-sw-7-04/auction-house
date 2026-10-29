@@ -20,13 +20,12 @@ typedef struct {
 } Sellers;
 
 typedef struct {
-	int buyer_index;
-	int seller_index;
-	double price;
+	double *buyer_payments;
+	Allocation allocation;
 } auction_results;
 
 
-Allocation vcg_auction(Buyers buyers, Sellers sellers);
-Allocation vcg_auction_multithreaded(Buyers buyers, Sellers sellers);
-Allocation vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha);
+auction_results vcg_auction(Buyers buyers, Sellers sellers);
+auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers);
+auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha);
 void print_allocation(Allocation x);
