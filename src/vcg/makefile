@@ -7,6 +7,10 @@ PROCS != nproc
 THREADS_PER_CORE = 2
 AVAIL_THREADS = $$(($(PROCS) * $(THREADS_PER_CORE)))
 
+ifndef VERBOSE
+.SILENT:
+endif
+
 main: vcg.c vcg.h
 	mkdir -p build build/include build/lib
 	$(CC) -o $(BUILD_DIR)/vcg.o $(CFLAGS) -fPIC -c vcg.c -DPROCS=$(AVAIL_THREADS) -lpthread

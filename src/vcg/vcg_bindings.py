@@ -1,5 +1,10 @@
 import ctypes
-so_file = "./build/lib/libvcg.so"
+import pathlib
+
+def parent(path):
+    return pathlib.Path(path).parent.resolve()
+
+so_file = f"{parent(__file__)}/build/lib/libvcg.so"
 MAX_AGENTS = 512
 
 vcglib = ctypes.CDLL(so_file)
