@@ -21,6 +21,7 @@ typedef struct {
 
 typedef struct {
 	double *buyer_payments;
+	double *seller_payments;
 	Allocation allocation;
 } auction_results;
 

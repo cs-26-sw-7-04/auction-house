@@ -139,9 +139,12 @@ static double elapsed_seconds(struct timespec start, struct timespec end)
 
 TEST time_test()
 {
+	bool result = true;
 	Buyers B = {0};
 	Sellers S = {0};
-	auction_results ar;
+	auction_results ar1;
+	auction_results ar2;
+	auction_results ar3;
 	char* filepath = "Time_test_output.csv";
 
 	FILE * output_data = fopen(filepath, "w");
@@ -167,20 +170,20 @@ TEST time_test()
 		struct timespec start, end;
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
-		ar = vcg_auction(B, S);
+		ar1 = vcg_auction(B, S);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time1 = elapsed_seconds(start, end);
-		print_allocation(ar.allocation);
+		print_allocation(ar1.allocation);
 		printf("time taken: %lf seconds (agents %d)\n",time1, i);
 		clock_gettime(CLOCK_MONOTONIC, &start);
-		ar = vcg_auction_multithreaded(B, S);
+		ar2 = vcg_auction_multithreaded(B, S);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time2 = elapsed_seconds(start, end);
-		print_allocation(ar.allocation);
+		print_allocation(ar2.allocation);
 		printf("time taken (multithreaded): %lf seconds (agents %d)\n",time2, i);
 		clock_gettime(CLOCK_MONOTONIC, &start);
 		float approximation_percent = 90.0f;
-		ar = vcg_auction_approximation(B, S, approximation_percent);
+		ar3 = vcg_auction_approximation(B, S, approximation_percent);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time3 = elapsed_seconds(start, end);
 		printf("time taken (Approximation): %lf seconds (agents %d)\n",time3, i);
@@ -189,9 +192,21 @@ TEST time_test()
 
 		printf("time delta: %lf seconds\n", delta1);
 		fprintf(output_data, "%d,%lf,%lf,%lf,%lf,%lf\n", i, time1, time2, delta1, time3, delta2);
-		
+		for (size_t j = 0; j < S.count; j++){
+			for (size_t k = 0; k < B.count; k++){
+				if (ar1.allocation.quantity[j][k] != ar2.allocation.quantity[j][k]){
+					fprintf(stderr, "error in multithreaded implementation in [%zu][%zu] expected %d got %d\n",
+						j, k, ar1.allocation.quantity[j][k], ar2.allocation.quantity[j][k]);
+					result = false;
+				}else if (ar1.allocation.quantity[j][k] != ar3.allocation.quantity[j][k]){
+					fprintf(stderr, "error in approximation implementation in [%zu][%zu] expected %d got %d\n",
+						j, k, ar1.allocation.quantity[j][k], ar3.allocation.quantity[j][k]);
+					result = false;
+				}
+			}
+		}
 	}
 	fclose(output_data);
-	return true;
+	return result;
 
 }
