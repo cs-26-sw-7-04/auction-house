@@ -29,8 +29,8 @@ double welfare(Buyers* buyers, Sellers* sellers, Allocation *x, Agent *excluded)
 
 			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;
 
-		
-			 if (!exclude_buyer) total  += q*buyers->value[j];
+			
+			if (!exclude_buyer && buyers->value[j] != NULL) total  += q*buyers->value[j][q-1];
 
 		}
 	}

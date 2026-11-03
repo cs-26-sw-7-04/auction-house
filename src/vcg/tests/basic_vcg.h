@@ -26,9 +26,15 @@ TEST basic_vcg_test_1()
 	B.demand[0] = 1;
 	B.demand[1] = 1;
 	B.demand[2] = 2;
-	B.value[0]  = 5;
-	B.value[1]  = 2;
-	B.value[2]  = 3;
+	B.value[0] = malloc(sizeof(double) * 2);
+	B.value[0][0]  = 5;
+	B.value[0][1]  = 10;
+	B.value[1] = malloc(sizeof(double) * 2);
+	B.value[1][0]  = 2;
+	B.value[1][0]  = 4;
+	B.value[2] = malloc(sizeof(double) * 2);
+	B.value[2][0]  = -4000;
+	B.value[1][1]  = 6;
 
 	Sellers S = {0};
 	S.count       = 1;
@@ -43,6 +49,12 @@ TEST basic_vcg_test_1()
 		result = false;
 	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1])
 		result = false;
+
+	int i = 0;
+	while (B.value[i] != NULL){
+		free(B.value[i]);
+		i++;
+	}
 	return result;
 }
 
@@ -55,9 +67,15 @@ TEST welfare_test()
 	B.demand[0] = 1;
 	B.demand[1] = 1;
 	B.demand[2] = 2;
-	B.value[0]  = 5;
-	B.value[1]  = 2;
-	B.value[2]  = 3;
+	B.value[0] = malloc(sizeof(double) * 2);
+	B.value[0][0]  = 5;
+	B.value[0][1]  = 10;
+	B.value[1] = malloc(sizeof(double) * 2);
+	B.value[1][0]  = 2;
+	B.value[1][0]  = 4;
+	B.value[2] = malloc(sizeof(double) * 2);
+	B.value[2][0]  = -30000;
+	B.value[1][1]  = 6;
 
 	Sellers S = {0};
 	S.count       = 2;
@@ -74,6 +92,11 @@ TEST welfare_test()
 	printf("expected welfare: %lf computed welfare: %lf\n", expected_welfare, computed_welfare);
 	if (computed_welfare < expected_welfare)
 		result = false;
+	int i = 0;
+	while (B.value[i] != NULL){
+		free(B.value[i]);
+		i++;
+	}
 	return result;
 }
 
@@ -84,38 +107,31 @@ TEST stress_test()
 
 	Buyers B = {0};
 	B.count = 9;
-	B.demand[0] = 1;
-	B.demand[1] = 1;
-	B.demand[2] = 2;
-	B.demand[3] = 1;
-	B.demand[4] = 1;
-	B.demand[5] = 1;
-	B.demand[6] = 2;
-	B.demand[7] = 1;
-	B.demand[8] = 2;
-	B.value[0]  = 5;
-	B.value[1]  = 2;
-	B.value[2]  = 3;
-	B.value[3]  = 5;
-	B.value[4]  = 5;
-	B.value[5]  = 2;
-	B.value[6]  = 3;
-	B.value[7]  = 2;
-	B.value[8]  = 3;
+	for (int i = 0; i < 9; i++){
+		B.demand[i] = (i % 2) +1;
+		B.value[i] = malloc(sizeof(double) * 2);
+		B.value[i][0] = (i % 7) + 2;
+		B.value[i][1] = B.value[i][0]*2;
+	}
 
 	Sellers S = {0};
-	S.count       = 1;
+	S.count       = 2;
 	S.capacity[0] = 2;
 	S.cost[0]     = 1;
-
+	S.capacity[1] = 2;
+	S.cost[1]     = 1;
 	auction_results ar = vcg_auction(B,S);
 	if (ar.allocation.rows == 0 || ar.allocation.cols == 0){
 		printf("ar.rows: %d ar.cols: %d\n", ar.allocation.rows, ar.allocation.cols);
 		result = false;
 	}
-	if (ar.allocation.rows != 1 || ar.allocation.cols != 9)
+	if (ar.allocation.rows != 2 || ar.allocation.cols != 9)
 		result = false;
-
+	int i = 0;
+	while (B.value[i] != NULL){
+		free(B.value[i]);
+		i++;
+	}
 	return result;
 }
 
@@ -126,25 +142,12 @@ TEST stress_test_multithreaded()
 
 	Buyers B = {0};
 	B.count = 9;
-	B.demand[0] = 1;
-	B.demand[1] = 1;
-	B.demand[2] = 2;
-	B.demand[3] = 1;
-	B.demand[4] = 1;
-	B.demand[5] = 1;
-	B.demand[6] = 2;
-	B.demand[7] = 1;
-	B.demand[8] = 2;
-	B.value[0]  = 5;
-	B.value[1]  = 2;
-	B.value[2]  = 3;
-	B.value[3]  = 5;
-	B.value[4]  = 5;
-	B.value[5]  = 2;
-	B.value[6]  = 3;
-	B.value[7]  = 2;
-	B.value[8]  = 3;
-
+	for (int i = 0; i < 9; i++){
+		B.demand[i] = (i % 2) +1;
+		B.value[i] = malloc(sizeof(double) * 2);
+		B.value[i][0] = (i % 7) + 2;
+		B.value[i][1] = B.value[i][0]*2;
+	}
 	Sellers S = {0};
 	S.count       = 2;
 	S.capacity[0] = 2;
@@ -160,7 +163,11 @@ TEST stress_test_multithreaded()
 	}
 	if (ar.allocation.rows != 2 || ar.allocation.cols != 9)
 		result = false;
-
+	int i = 0;
+	while (B.value[i] != NULL){
+		free(B.value[i]);
+		i++;
+	}
 	return result;
 }
 
@@ -193,8 +200,11 @@ bool time_test()
 	for (int i = 0; i < MAX_AGENTS; i++) {
 		S.capacity[i] = 1 + rand() % 9;
 		S.cost[i]     = 0; //1 + rand() % 9;
-		B.demand[i]   = 1 + rand() % 9; 
-		B.value[i]    = 1 + rand() % 9; 
+
+		B.demand[i] = (i % 2) +1;
+		B.value[i] = malloc(sizeof(double) * 2);
+		B.value[i][0] = (rand() % 7) + 2;
+		B.value[i][1] = B.value[i][0]*2;
 	}
 
 	for (int i = 1; i < 6; i ++){

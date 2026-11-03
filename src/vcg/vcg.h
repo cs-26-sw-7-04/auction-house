@@ -10,7 +10,7 @@ typedef struct {
 typedef struct {
 	size_t count;
 	int demand[MAX_AGENTS];
-	double value[MAX_AGENTS];
+	double* value[MAX_AGENTS];
 } Buyers;
 
 typedef struct {

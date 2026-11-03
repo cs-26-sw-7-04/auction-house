@@ -23,7 +23,7 @@ test: $(TEST_DIR)/gentest.c main_debug $(wildcard $(TEST_DIR)/*.h)
 	./$(TEST_DIR)/gentest  $(TEST_DIR) $(TEST_DIR)/test.c $(filter-out $(TEST_DIR)/test_utils.h,$(wildcard $(TEST_DIR)/*.h))
 	$(CC) $(CFLAGS) -ggdb $(TEST_DIR)/test.c $(OBJ) -o $(TEST_DIR)/test
 	./$(TEST_DIR)/test
-	python $(TEST_DIR)/data_visualizer.py Time_test_output.csv
+	#python $(TEST_DIR)/data_visualizer.py Time_test_output.csv
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR) $(TEST_DIR)/test $(TEST_DIR)/gentest
