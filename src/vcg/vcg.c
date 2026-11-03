@@ -81,8 +81,11 @@ void enumerate(Search *search, size_t cell)
 
        
 
-	bool exclude_buyer  = search->excluded != NULL && search->excluded->type == AGENT_BUYER  && search->excluded->index == j;
-	bool exclude_seller = search->excluded != NULL && search->excluded->type == AGENT_SELLER && search->excluded->index == i;
+	bool exclude_buyer  = search->excluded != NULL && 
+	                      search->excluded->type == AGENT_BUYER  && 
+						  search->excluded->index == j;
+	bool exclude_seller = search->excluded != NULL && 
+	                      search->excluded->type == AGENT_SELLER && search->excluded->index == i;
 
 	int remaining_buyer = search->buyers->demand[j] - search->buyers_used[j];
 	int remaining_seller = search->sellers->capacity[i] - search->sellers_used[i];

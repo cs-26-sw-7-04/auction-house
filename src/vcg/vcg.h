@@ -9,14 +9,21 @@ typedef struct {
 
 typedef struct {
 	size_t count;
-	int demand[MAX_AGENTS];
+	int demand[MAX_AGENTS]; //Max amount of flops they can take
+	int used_demand[MAX_AGENTS]; //Used during calculation
 	double* value[MAX_AGENTS];
 } Buyers;
 
 typedef struct {
+	int id;
+	int flops;
+} Task;
+
+typedef struct {
 	size_t count;
-	int capacity[MAX_AGENTS];
-	double cost[MAX_AGENTS];
+	Task* tasks[MAX_AGENTS];
+	int capacity[MAX_AGENTS]; //Amount of tasks it has
+	double cost[MAX_AGENTS]; //Always zero
 } Sellers;
 
 typedef struct {
