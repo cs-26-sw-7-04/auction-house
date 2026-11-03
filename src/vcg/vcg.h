@@ -17,6 +17,7 @@ typedef struct {
 typedef struct {
 	int id;
 	int flops;
+	bool assigned;
 } Task;
 
 typedef struct {
