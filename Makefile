@@ -32,7 +32,7 @@ kcheck:               ## Check that the required tools are installed
 kup: kcheck            ## Create the local k3s cluster (skips if it exists)
 	@k3d cluster list | grep -q "^$(CLUSTER) " || k3d cluster create $(CLUSTER) \
 		--image $(K3S_IMAGE) \
-		--servers 1 --agents 2 \
+		--servers 1 --agents 1 \
 		--port "8080:80@loadbalancer"
 	@kubectl config use-context k3d-$(CLUSTER)
 	@kubectl get nodes
