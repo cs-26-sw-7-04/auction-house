@@ -96,8 +96,7 @@ class TaskRecord(BaseModel):
     submitted_at: UtcDatetime
     task: TaskSpec
 
-
-tasks: dict[uuid.UUID, TaskRecord] = {} # in memory, as we have no DB right now
+tasks_store: dict[uuid.UUID, TaskRecord] = {} # in memory, as we have no DB right now
 
 
 def store_task(task: Task) -> TaskRecord:
@@ -108,13 +107,13 @@ def store_task(task: Task) -> TaskRecord:
         submitted_at=datetime.datetime.now(datetime.timezone.utc),
         task=task,
     )
-    tasks[record.task_id] = record
+    tasks_store[record.task_id] = record
     return record
 
 
 def get_record(task_id: uuid.UUID) -> TaskRecord:
     """.3"""
-    record = tasks.get(task_id)
+    record = tasks_store.get(task_id)
     if record is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return record
