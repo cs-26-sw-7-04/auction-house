@@ -98,8 +98,27 @@ void enumerate(Search *search, size_t cell)
 		search->sellers_used[i] += k;
 		search->buyers_used[j] += k;
 
-		if (search->buyers_used[j] <= search->buyers->demand[j] && search->sellers_used[i] <= search->sellers->capacity[i])
+		bool task_available = true;
+		int available_task_index = -1;
+		for (int k = 0; k < search->sellers->capacity[i]; k++){
+			if (search->sellers->tasks[k]->assigned
+			    || search->sellers->tasks[k]->flops
+			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
+				task_available = false;
+			}else
+			{
+				task_available = true;
+				available_task_index = k;
+				break;
+			}
+		}
+		if (search->buyers_used[j] <= search->buyers->demand[j]
+		    && search->sellers_used[i] <= search->sellers->capacity[i]
+		    && task_available
+		    && available_task_index > -1){
 			enumerate(search, cell + 1);
+			search->buyers->used_demand[j] += search->sellers->tasks[available_task_index]->flops;
+		}
 
 		search->sellers_used[i] -= k;
 		search->buyers_used[j] -= k;
@@ -285,8 +304,30 @@ void* multithreaded_branch(void* arg)
 		bool should_enumerate =
 			search->buyers_used[j]<= search->buyers->demand[j]
 			&& search->sellers_used[i] <= search->sellers->capacity[i];
-		if (should_enumerate)
+		
+		bool task_available = true;
+		int available_task_index = -1;
+		for (int k = 0; k < search->sellers->capacity[i]; k++){
+			if (search->sellers->tasks[k]->assigned
+			    || search->sellers->tasks[k]->flops
+			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
+				task_available = false;
+			}else
+			{
+				task_available = true;
+				available_task_index = k;
+				break;
+			}
+		}
+		if (should_enumerate
+		    && task_available
+		    && search->buyers_used[j] <= search->buyers->demand[j]
+		    && search->sellers_used[i] <= search->sellers->capacity[i]
+		    && available_task_index > -1)
 			enumerate(search, cell + 1);
+
+		/* if (should_enumerate) */
+		/* 	enumerate(search, cell + 1); */
 
 		search->sellers_used[i] -= k;
 		search->buyers_used[j] -= k;

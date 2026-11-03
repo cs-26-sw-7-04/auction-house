@@ -39,7 +39,17 @@ TEST basic_vcg_test_1()
 	Sellers S = {0};
 	S.count       = 1;
 	S.capacity[0] = 2;
+	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
+	S.tasks[0][0].flops = 1;
+	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
+	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
+	S.capacity[1] = 0;
+	S.cost[1]     = 0;
+	S.tasks[0][1].flops = 1;
+
+
+
 
 	auction_results ar = vcg_auction(B,S);
 	print_allocation(ar.allocation);
@@ -61,7 +71,7 @@ TEST basic_vcg_test_1()
 TEST welfare_test()
 {
 	bool result = true;
-	
+
 	Buyers B = {0};
 	B.count     = 3;
 	B.demand[0] = 1;
@@ -78,11 +88,16 @@ TEST welfare_test()
 	B.value[1][1]  = 6;
 
 	Sellers S = {0};
-	S.count       = 2;
+	S.count       = 1;
 	S.capacity[0] = 2;
+	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
+	S.tasks[0][0].flops = 1;
+	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
+	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
 	S.capacity[1] = 0;
 	S.cost[1]     = 0;
+	S.tasks[0][1].flops = 1;
 	
 
 	auction_results ar = vcg_auction(B,S);
@@ -118,8 +133,10 @@ TEST stress_test()
 	S.count       = 2;
 	S.capacity[0] = 2;
 	S.cost[0]     = 1;
+	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
 	S.capacity[1] = 2;
 	S.cost[1]     = 1;
+	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
 	auction_results ar = vcg_auction(B,S);
 	if (ar.allocation.rows == 0 || ar.allocation.cols == 0){
 		printf("ar.rows: %d ar.cols: %d\n", ar.allocation.rows, ar.allocation.cols);
@@ -152,9 +169,10 @@ TEST stress_test_multithreaded()
 	S.count       = 2;
 	S.capacity[0] = 2;
 	S.cost[0]     = 1;
+	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
 	S.capacity[1] = 2;
 	S.cost[1]     = 1;
-
+	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[0]);
 	auction_results ar = vcg_auction_multithreaded(B,S);
 	print_allocation(ar.allocation);
 	if (ar.allocation.rows == 0 || ar.allocation.cols == 0){
