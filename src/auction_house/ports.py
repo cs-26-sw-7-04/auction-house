@@ -9,7 +9,13 @@ from collections.abc import Mapping, Sequence
 from typing import Protocol, runtime_checkable
 
 from auction_house.domain import (
-    Auction, Award, Bid, Outcome, Selection, Task, TaskStatus,
+    Auction,
+    Award,
+    Bid,
+    Outcome,
+    Selection,
+    Task,
+    TaskStatus,
 )
 
 

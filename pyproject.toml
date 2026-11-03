@@ -53,3 +53,4 @@ disable = [
     "W0105",
 ]
 ignore-paths = ["^tests/"]
+max-line-length=160

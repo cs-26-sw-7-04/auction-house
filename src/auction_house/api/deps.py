@@ -15,10 +15,12 @@ api_key = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def get_house(request: Request) -> AuctionHouse:
+    """:3"""
     return request.app.state.house
 
 
 def get_settings(request: Request) -> Settings:
+    """:3"""
     return request.app.state.settings
 
 

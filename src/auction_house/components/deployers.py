@@ -21,6 +21,7 @@ class LoggingDeployer:
         self.deployed: list[tuple[str, str]] = []
 
     def deploy(self, task: Task, award: Award) -> str:
+        """:3"""
         log.info("would run task %s for %s", task.task_id, award.bidder_id)
         self.deployed.append((str(task.task_id), award.bidder_id))
         return f"log-{task.task_id}"
@@ -41,6 +42,7 @@ class KubernetesDeployer:
         self.image_pull_policy = image_pull_policy
 
     def build_job(self, task: Task, award: Award, now: datetime.datetime) -> dict[str, Any]:
+        """:3"""
         spec, res = task.spec, task.spec.resources
         limits: dict[str, str] = {"cpu": f"{res.cpu_millis}m", "memory": f"{res.memory_mb}Mi"}
         if res.gpu:
@@ -73,6 +75,7 @@ class KubernetesDeployer:
         }
 
     def deploy(self, task: Task, award: Award) -> str:
+        """:3"""
         job = self.build_job(task, award, datetime.datetime.now(datetime.timezone.utc))
         self.batch_api.create_namespaced_job(namespace=self.namespace, body=job)
         return job["metadata"]["name"]

@@ -14,6 +14,7 @@ class MethodVerifier:
     """Follows the task's own verification setting; only hash matching exists."""
 
     def verify(self, task: Task, result_hash: str | None) -> bool:
+        """:3"""
         if task.spec.verification is Verification.HASH:
             return result_hash == task.spec.expected_result_hash
         return True
@@ -22,6 +23,7 @@ class MethodVerifier:
 @plugins.verifiers.register("accept-all")
 class AcceptAll:
     def verify(self, task: Task, result_hash: str | None) -> bool:
+        """:3"""
         return True
 
 
@@ -30,4 +32,5 @@ class LoggingLedger:
     """Reputation is logged, not stored or used."""
 
     def record(self, bidder_id: str, task_id: uuid.UUID, success: bool) -> None:
+        """:3"""
         log.info("reputation: %s %s task %s", bidder_id, "completed" if success else "failed", task_id)

@@ -37,6 +37,7 @@ STATUS_FOR = {
 
 
 async def _run_on_timer(house: AuctionHouse, seconds: float) -> None:
+    """:3"""
     while True:
         try:
             await asyncio.to_thread(house.tick)

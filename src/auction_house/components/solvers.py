@@ -11,6 +11,7 @@ from auction_house.domain import Bid, Selection
 
 
 def welfare_of(values: Mapping[uuid.UUID, int], bids: Sequence[Bid], assignment: Mapping[uuid.UUID, str]) -> int:
+    """:3"""
     price = {b.bidder_id: b.unit_price for b in bids}
     return sum(values[task] - price[bidder] for task, bidder in assignment.items())
 
@@ -21,6 +22,7 @@ class SortedSolver:
     valuable tasks with the cheapest slots is optimal, so nothing is enumerated."""
 
     def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Selection:
+        """:3"""
         slots = sorted(
             (bid.unit_price, bid.bidder_id)
             for bid in bids

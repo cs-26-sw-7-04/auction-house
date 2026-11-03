@@ -1,5 +1,8 @@
 """Composition root: turns settings into a wired-up `AuctionHouse`."""
-from auction_house import components, plugins  # noqa: F401  (importing `components` registers the built-ins)
+from auction_house import (  # noqa: F401  (importing `components` registers the built-ins)
+    components,
+    plugins,
+)
 from auction_house.config import Settings
 from auction_house.house import AuctionHouse, Components
 

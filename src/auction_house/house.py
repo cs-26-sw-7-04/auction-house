@@ -12,8 +12,22 @@ from dataclasses import dataclass
 
 from auction_house import ports
 from auction_house.domain import (
-    Assignment, Auction, AuctionClosed, AuctionStatus, AuctionView, Bid, BidRequest, IneligibleBid,
-    InvalidTask, NotAssigned, Task, TaskOffer, TaskSpec, TaskStatus, UnknownTask, utcnow,
+    Assignment,
+    Auction,
+    AuctionClosed,
+    AuctionStatus,
+    AuctionView,
+    Bid,
+    BidRequest,
+    IneligibleBid,
+    InvalidTask,
+    NotAssigned,
+    Task,
+    TaskOffer,
+    TaskSpec,
+    TaskStatus,
+    UnknownTask,
+    utcnow,
 )
 
 log = logging.getLogger(__name__)
@@ -170,12 +184,15 @@ class AuctionHouse:
     # --- bidders ------------------------------------------------------------------
 
     def list_auctions(self) -> list[AuctionView]:
+        """:3"""
         return [self.view(a) for a in self.c.auctions.all()]
 
     def get_auction(self, auction_id: uuid.UUID) -> Auction:
+        """:3"""
         return self.c.auctions.get(auction_id)
 
     def view(self, auction: Auction) -> AuctionView:
+        """:3"""
         offers = tuple(
             TaskOffer(task_id=t.task_id, resources=t.spec.resources, deadline=t.spec.deadline)
             for t in map(self.c.tasks.get, auction.task_ids)
@@ -184,6 +201,7 @@ class AuctionHouse:
                            closes_at=auction.closes_at, tasks=offers)
 
     def assignments_of(self, bidder_id: str) -> list[Assignment]:
+        """:3"""
         return [
             Assignment(auction_id=a.auction_id, award=award,
                        tasks=tuple(self.c.tasks.get(t) for t in award.task_ids))
@@ -204,16 +222,19 @@ class AuctionHouse:
     # --- internals ------------------------------------------------------------------
 
     def _set(self, task_id: uuid.UUID, **changes) -> Task:
+        """:3"""
         task = self.c.tasks.get(task_id).model_copy(update=changes)
         self.c.tasks.update(task)
         return task
 
     def _save(self, auction: Auction, **changes) -> Auction:
+        """:3"""
         auction = auction.model_copy(update=changes)
         self.c.auctions.put(auction)
         return auction
 
     def _expire_pending(self) -> None:
+        """:3"""
         for task in self.c.tasks.list(status=TaskStatus.PENDING):
             if task.spec.deadline <= self.clock():
                 self._set(task.task_id, status=TaskStatus.EXPIRED)

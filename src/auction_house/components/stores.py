@@ -14,20 +14,24 @@ class InMemoryTaskStore:
         self._lock = threading.Lock()
 
     def add(self, task: Task) -> None:
+        """:3"""
         with self._lock:
             self._tasks[task.task_id] = task
 
     def get(self, task_id: uuid.UUID) -> Task:
+        """:3"""
         try:
             return self._tasks[task_id]
         except KeyError:
             raise UnknownTask(str(task_id)) from None
 
     def update(self, task: Task) -> None:
+        """:3"""
         self.get(task.task_id)
         self.add(task)
 
     def list(self, *, status: TaskStatus | None = None, owner: str | None = None) -> list[Task]:
+        """:3"""
         with self._lock:
             tasks = list(self._tasks.values())
         return [t for t in tasks if (status is None or t.status == status) and (owner is None or t.owner == owner)]

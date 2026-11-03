@@ -60,6 +60,7 @@ class CVcgSolver:
         self._lib.vcg_auction.restype = _Allocation
 
     def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Selection:
+        """:3"""
         tasks = sorted(values)
         bidders = sorted(bids, key=lambda b: b.bidder_id)
         if not tasks or not bidders:  # the library divides by the number of columns

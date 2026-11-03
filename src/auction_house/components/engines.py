@@ -48,6 +48,7 @@ class VcgEngine:
         self.solver = solver
 
     def clear(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Outcome:
+        """:3"""
         return _awards(values, bids, self.solver, pivot=True)
 
 
@@ -60,4 +61,5 @@ class PayAsBidEngine:
         self.solver = solver
 
     def clear(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Outcome:
+        """:3"""
         return _awards(values, bids, self.solver, pivot=False)

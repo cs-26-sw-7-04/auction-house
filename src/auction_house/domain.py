@@ -11,6 +11,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validat
 
 
 def utcnow() -> datetime.datetime:
+    """:3"""
     return datetime.datetime.now(datetime.timezone.utc)
 
 
@@ -32,6 +33,7 @@ class Model(BaseModel):
 # --- Tasks -------------------------------------------------------------------
 
 class Resources(Model):
+    """:3"""
     cpu_millis: int = Field(500, gt=0)
     memory_mb: int = Field(256, gt=0)
     gpu: bool = False
@@ -59,6 +61,7 @@ class TaskSpec(Model):
 
 
 class TaskStatus(enum.StrEnum):
+    """:3"""
     PENDING = "pending"          # waiting for the next auction
     IN_AUCTION = "in_auction"    # part of an open auction
     EXECUTING = "executing"      # awarded and deployed
@@ -72,6 +75,7 @@ TERMINAL = frozenset({TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.UNALLO
 
 
 class Task(Model):
+    """:3"""
     task_id: uuid.UUID
     owner: str
     spec: TaskSpec
@@ -99,11 +103,13 @@ class BidRequest(Model):
 
 
 class Bid(BidRequest):
+    """:3"""
     bidder_id: str
     placed_at: UtcDatetime
 
 
 class Award(Model):
+    """:3"""
     bidder_id: str
     task_ids: tuple[uuid.UUID, ...]
     unit_price: int
@@ -111,6 +117,7 @@ class Award(Model):
 
 
 class Outcome(Model):
+    """:3"""
     awards: tuple[Award, ...]
     unallocated: tuple[uuid.UUID, ...]
     welfare: int
@@ -123,6 +130,7 @@ class Selection(Model):
 
 
 class AuctionStatus(enum.StrEnum):
+    """:3"""
     OPEN = "open"
     CLEARING = "clearing"
     CLEARED = "cleared"
