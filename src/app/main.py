@@ -4,7 +4,8 @@ import os
 import uvicorn
 from fastapi import FastAPI
 
-from app.routes import assignments, auctions, bidders, miscellaneous, tasks
+from app.routes import assignments, auctions, bidders, miscellaneous, tasks, annoucement
+from .state import *
 
 from vcg.vcg_bindings import VCG_buyers_python, VCG_sellers_python, vcglib
 
@@ -18,6 +19,12 @@ app.include_router(bidders.router)#, prefix="/api/v1")
 
 def main():
     """:3"""
+    app.include_router(assignments.router)#, prefix="/api/v1")
+    app.include_router(auctions.router)#, prefix="/api/v1")
+    app.include_router(tasks.router)#, prefix="/api/v1")
+    app.include_router(miscellaneous.router)#, prefix="/api/v1")
+    app.include_router(bidders.router)#, prefix="/api/v1")
+    app.include_router(annoucement.router)
     
     #Run an auction:
 
