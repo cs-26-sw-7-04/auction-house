@@ -1,0 +1,8 @@
+#+Title: README
+
+* Goal
+The goal of this project is to implement a basic version of VCG and a
+basic version of the Computationally feasible VCG mechanism
+(second-change VCG) proposed by (Nisan and Ronen, 2007). And compare
+their performance to see if second-chance VCG truly is feasible for
+use.

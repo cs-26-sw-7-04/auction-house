@@ -8,7 +8,8 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 
-from app.tasks import app, tasks
+from app.main import app
+from app.models import *
 
 client = TestClient(app)
 
@@ -34,13 +35,13 @@ def parse(value: str) -> datetime.datetime:
 
 def make_task(**overrides) -> dict:
     task = {
-        "task_type": "hash",
+        "task_type": "sudoku",
         "deadline": in_one_hour().isoformat(),
         "payload_tag": "demo:latest",
         "max_money_budget": 100,
         "resources_requirement": dict(RESOURCES),
-        "validation_method": "hash",
-        "location": {},
+        "verification_method": "hash",
+        "expected_result_hash": "a" * 64,
     }
     task.update(overrides)
     return task
@@ -48,9 +49,9 @@ def make_task(**overrides) -> dict:
 
 @pytest.fixture(autouse=True)
 def clear_tasks():
-    tasks.clear()
+    tasks_store.clear()
     yield
-    tasks.clear()
+    tasks_store.clear()
 
 
 def test_submitted_task_is_stored_as_pending():
@@ -59,7 +60,7 @@ def test_submitted_task_is_stored_as_pending():
     assert response.status_code == 201
     body = response.json()
     assert body["status"] == "pending"
-    assert uuid.UUID(body["task_id"]) in tasks
+    assert uuid.UUID(body["task_id"]) in tasks_store
 
 
 def test_deadline_in_other_timezone_is_converted_to_utc():
@@ -88,7 +89,7 @@ def test_deadline_without_timezone_is_assumed_utc():
     [
         {"deadline": "2000-01-01T00:00:00Z"},
         {"max_money_budget": 0},
-        {"validation_method": "trust_me"},
+        {"verification_method": "trust_me"},
         {"resources_requirement": {**RESOURCES, "gpu_vram": 4096}},
     ],
     ids=["deadline_in_past", "zero_budget", "unknown_validation", "vram_without_gpu"],
@@ -97,7 +98,7 @@ def test_invalid_task_is_rejected_and_not_stored(overrides):
     response = client.post("/tasks", json=make_task(**overrides))
 
     assert response.status_code == 422
-    assert tasks == {}
+    assert tasks_store == {}
 
 
 def test_stored_task_can_be_fetched():
@@ -124,7 +125,7 @@ def test_batch_stores_every_task():
 
     assert response.status_code == 201
     assert len(response.json()) == 2
-    assert len(tasks) == 2
+    assert len(tasks_store) == 2
 
 
 def test_batch_with_one_invalid_task_stores_nothing():
@@ -133,4 +134,4 @@ def test_batch_with_one_invalid_task_stores_nothing():
     response = client.post("/tasks/batch", json=batch)
 
     assert response.status_code == 422
-    assert tasks == {}
+    assert tasks_store == {}
