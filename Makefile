@@ -17,7 +17,7 @@ check:               ## Check that the required tools are installed
 
 up: check            ## Create the local k3s cluster (skips if it exists)
 	@k3d cluster list | grep -q "^$(CLUSTER) " || k3d cluster create $(CLUSTER) \
-		--servers 1 --agents 2 \
+		--servers 1 --agents 1 \
 		--port "8080:80@loadbalancer"
 	@kubectl config use-context k3d-$(CLUSTER)
 	@kubectl get nodes
@@ -34,7 +34,8 @@ load: build          ## Import the image into the cluster
 	k3d image import $(IMAGE):$(TAG) -c $(CLUSTER)
 
 deploy: load         ## Build, import and deploy the auction service
-	kubectl apply -f kubernetes/
+	kubectl apply -f kubernetes/auction-services.yaml -f kubernetes/ingress.yaml
+	kubectl rollout restart deployment/auction 
 	kubectl rollout status deployment/auction --timeout=120s
 
 # simulator-up:        ## Start the bidder simulator
