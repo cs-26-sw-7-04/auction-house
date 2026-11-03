@@ -36,9 +36,43 @@ TEST basic_vcg_test_1()
 	S.cost[0]     = 1;
 
 	auction_results ar = vcg_auction(B,S);
+	print_allocation(ar.allocation);
 	if (ar.allocation.rows == 0 || ar.allocation.cols == 0)
 		result = false;
 	if (ar.allocation.rows != 1 || ar.allocation.cols != 3)
+		result = false;
+	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1])
+		result = false;
+	return result;
+}
+
+TEST welfare_test()
+{
+	bool result = true;
+	
+	Buyers B = {0};
+	B.count     = 3;
+	B.demand[0] = 1;
+	B.demand[1] = 1;
+	B.demand[2] = 2;
+	B.value[0]  = 5;
+	B.value[1]  = 2;
+	B.value[2]  = 3;
+
+	Sellers S = {0};
+	S.count       = 2;
+	S.capacity[0] = 2;
+	S.cost[0]     = 1;
+	S.capacity[1] = 0;
+	S.cost[1]     = 0;
+	
+
+	auction_results ar = vcg_auction(B,S);
+	print_allocation(ar.allocation);
+	double expected_welfare = 6.0;
+	double computed_welfare = welfare(&B, &S, &ar.allocation, NULL);
+	printf("expected welfare: %lf computed welfare: %lf\n", expected_welfare, computed_welfare);
+	if (computed_welfare < expected_welfare)
 		result = false;
 	return result;
 }
@@ -137,7 +171,7 @@ static double elapsed_seconds(struct timespec start, struct timespec end)
            (double)(end.tv_nsec - start.tv_nsec) / 1e9;
 }
 
-TEST time_test()
+bool time_test()
 {
 	bool result = true;
 	Buyers B = {0};

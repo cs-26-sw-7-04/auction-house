@@ -30,3 +30,18 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers);
 auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers);
 auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha);
 void print_allocation(Allocation x);
+
+
+/* below are functions only exposed for testing */
+
+typedef enum {
+	AGENT_BUYER,
+	AGENT_SELLER
+} Agent_type;
+
+typedef struct {
+	Agent_type type;
+	size_t index;
+} Agent;
+
+double welfare(Buyers* buyers, Sellers* sellers, Allocation *x, Agent *excluded);

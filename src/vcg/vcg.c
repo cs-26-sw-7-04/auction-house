@@ -10,16 +10,6 @@
 #define PROCS 1
 #endif
 
-typedef enum {
-	AGENT_BUYER,
-	AGENT_SELLER
-} Agent_type;
-
-typedef struct {
-	Agent_type type;
-	size_t index;
-} Agent;
-
 typedef struct {
 	Allocation allocation;
 	double welfare;
@@ -38,10 +28,18 @@ double welfare(Buyers* buyers, Sellers* sellers, Allocation *x, Agent *excluded)
 			int q = x->quantity[i][j];
 
 			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;
-			bool exclude_seller = excluded != NULL && excluded->type == AGENT_SELLER && excluded->index == i;
+
 		
 			 if (!exclude_buyer) total  += q*buyers->value[j];
-			 if (!exclude_seller) total -= q*sellers->cost[i];
+
+		}
+	}
+	for (size_t i = 0; i < sellers->count; i++){
+		for (size_t j = 0; j < buyers->count; j++){
+			int q = x->quantity[i][j];
+			bool exclude_seller = excluded != NULL && excluded->type == AGENT_SELLER && excluded->index == i;
+		
+			if (!exclude_seller) total -= q*sellers->cost[i];
 		}
 	}
 	return total;
