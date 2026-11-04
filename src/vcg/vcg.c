@@ -100,15 +100,15 @@ void enumerate(Search *search, size_t cell)
 
 		bool task_available = true;
 		int available_task_index = -1;
-		for (int k = 0; k < search->sellers->capacity[i]; k++){
-			if (search->sellers->tasks[k]->assigned
-			    || search->sellers->tasks[k]->flops
+		for (int l = 0; k < search->sellers->capacity[i]; l++){
+			if (search->sellers->tasks[l]->assigned
+			    || search->sellers->tasks[l]->flops
 			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
 				task_available = false;
 			}else
 			{
 				task_available = true;
-				available_task_index = k;
+				available_task_index = l;
 				break;
 			}
 		}
