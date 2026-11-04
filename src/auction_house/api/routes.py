@@ -21,6 +21,7 @@ bidders = APIRouter(tags=["Bidders"])
 operators = APIRouter(prefix="/operator", tags=["Operator"], dependencies=[Operator])
 health = APIRouter(tags=["Health"])
 
+# --- submitters --------------------------------------------------------------
 
 @submitters.post("", status_code=status.HTTP_201_CREATED)
 def submit_task(spec: TaskSpec, owner: Submitter, house: House) -> Task:
@@ -30,15 +31,16 @@ def submit_task(spec: TaskSpec, owner: Submitter, house: House) -> Task:
 
 @submitters.get("")
 def my_tasks(owner: Submitter, house: House) -> list[Task]:
-    """:3"""
+    """All tasks you have submitted, whatever their status."""
     return house.tasks_of(owner)
 
 
 @submitters.get("/{task_id}")
 def my_task(task_id: uuid.UUID, owner: Submitter, house: House) -> Task:
-    """:3"""
+    """One of your tasks. A task that does not exist and one that belongs to someone else are indistinguishable."""
     return house.get_task(task_id, owner)
 
+# --- bidders -----------------------------------------------------------------
 
 @bidders.get("/auctions")
 def list_auctions(house: House) -> list[AuctionView]:
@@ -48,10 +50,17 @@ def list_auctions(house: House) -> list[AuctionView]:
 
 @bidders.get("/auctions/{auction_id}")
 def get_auction(auction_id: uuid.UUID, house: House) -> AuctionView:
-    """:3"""
+    """One auction as bidders see it: the tasks on offer, without bids or outcome."""
     return house.view(house.get_auction(auction_id))
 
 
+# TODO: bidding is per auction, one bid per bidder. The intended model is a bid per
+# task, so these two endpoints change. Proposed:
+#   PUT /auctions/{auction_id}/tasks/{task_id}/bid   place or replace one bid
+#   GET /auctions/{auction_id}/bids                  your bids in this auction
+# The GET then returns a list (empty when you have not bid), so `my_bid` no longer
+# needs to set a 404 by hand, which the generated OpenAPI spec does not show today.
+# See the TODOs on `AuctionHouse.submit_bid` and `BidRequest`.
 @bidders.put("/auctions/{auction_id}/bid", status_code=status.HTTP_204_NO_CONTENT)
 def place_bid(auction_id: uuid.UUID, request: BidRequest, bidder_id: Bidder, house: House) -> Response:
     """Place or replace your sealed bid while the auction is open."""
@@ -83,6 +92,7 @@ def report_result(task_id: uuid.UUID, report: ResultReport, bidder_id: Bidder, h
     """Report the result of a task you won. It is verified and the task settled."""
     return house.report_result(bidder_id, task_id, report.result_hash)
 
+# --- operators ---------------------------------------------------------------
 
 @operators.post("/auctions", status_code=status.HTTP_201_CREATED)
 def open_auctions(house: House) -> list[Auction]:
@@ -101,7 +111,9 @@ def clear_auction(auction_id: uuid.UUID, house: House, force: bool = False) -> A
     """Clear an auction. `force` clears before the bidding window has ended."""
     return house.clear(auction_id, force=force)
 
+# --- other ------------------------------------------------------------------
 
 @health.get("/health")
 def get_health() -> dict[str, str]:
+    """System health. Return ok if successfull"""
     return {"status": "ok"}
