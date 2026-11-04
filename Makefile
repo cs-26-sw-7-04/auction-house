@@ -43,7 +43,7 @@ kdown:                ## Delete the local cluster
 krestart: kdown kup     ## Recreate the cluster from scratch
 
 kbuild:               ## Build the auction Docker image
-	docker build -t $(IMAGE):$(TAG) ..
+	docker build -t $(IMAGE):$(TAG) .
 
 kload: kbuild          ## Import the image into the cluster
 	k3d image import $(IMAGE):$(TAG) -c $(CLUSTER)
