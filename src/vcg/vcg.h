@@ -40,6 +40,14 @@ auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float 
 void print_allocation(Allocation x);
 
 
+Sellers assign_task(Sellers s, int index, int id, int flops){
+	s.tasks[index]		= malloc(sizeof(Task));
+	s.tasks[index]->id	= id;
+	s.tasks[index]->flops	= flops;
+	return s;
+}
+
+
 /* below are functions only exposed for testing */
 
 typedef enum {
