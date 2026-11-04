@@ -7,7 +7,7 @@ Passing `house` (or `settings`) in makes the app easy to test: nothing is global
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -51,7 +51,7 @@ def create_app(settings: Settings | None = None, house: AuctionHouse | None = No
     settings = settings or Settings()
 
     @contextlib.asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         app.state.settings = settings
         app.state.house = house or build_house(settings)
         timer = (asyncio.create_task(_run_on_timer(app.state.house, settings.tick.total_seconds()))
