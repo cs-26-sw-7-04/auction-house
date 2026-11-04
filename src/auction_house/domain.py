@@ -11,7 +11,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validat
 
 
 def utcnow() -> datetime.datetime:
-    """:3"""
+    """The current time as a timezone-aware UTC datetime. The house's default clock implementation"""
     return datetime.datetime.now(datetime.timezone.utc)
 
 
@@ -33,7 +33,8 @@ class Model(BaseModel):
 # --- Tasks -------------------------------------------------------------------
 
 class Resources(Model):
-    """:3"""
+    """What a task needs to run. Bidders see it so they can valuate the task, and
+    the deployer turns it into resource requests for the winner's node."""
     cpu_millis: int = Field(500, gt=0)
     memory_mb: int = Field(256, gt=0)
     gpu: bool = False
@@ -61,7 +62,11 @@ class TaskSpec(Model):
 
 
 class TaskStatus(enum.StrEnum):
-    """:3"""
+    """Where a task is in its life.
+    
+    Normal path: pending -> in_auction -> executing -> completed or failed.
+    A task nobody wins goes back to pending until it runs out of rounds (then
+    unallocated), and a pending task past its deadline expires."""
     PENDING = "pending"          # waiting for the next auction
     IN_AUCTION = "in_auction"    # part of an open auction
     EXECUTING = "executing"      # awarded and deployed
@@ -71,11 +76,15 @@ class TaskStatus(enum.StrEnum):
     EXPIRED = "expired"          # deadline passed before it was awarded
 
 
+# Statuses a task can never leave. Immutable.
 TERMINAL = frozenset({TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.UNALLOCATED, TaskStatus.EXPIRED})
 
 
 class Task(Model):
-    """:3"""
+    """A task as the house stores it.
+    
+    the submitter's spec plus what the house has learned about it since. 
+    Is immutable."""
     task_id: uuid.UUID
     owner: str
     spec: TaskSpec
@@ -97,19 +106,42 @@ class TaskOffer(Model):
 # --- Bids and outcomes ---------------------------------------------------------
 
 class BidRequest(Model):
-    """Sealed: only the bidder who placed it and the house can read it."""
+    """Sealed: only the bidder who placed it and the house can read it.
+    
+    TODO: a bid currently covers a whole auction: `capacity` and `unit_price` apply
+    to every task the bidder wins. The intended model is a bid per task. Proposed:
+ 
+        class BidRequest(Model):
+            price: int = Field(ge=0, description="Price asked to run this task")
+ 
+        class Bid(BidRequest):
+            task_id: uuid.UUID
+            bidder_id: str
+            placed_at: UtcDatetime
+ 
+    `task_id` comes from the URL in the request, so it is only on the stored `Bid`.
+    Open question: what replaces `capacity`? Without any coupling between tasks, the
+    solver reduces to the cheapest ask per task. See the TODO on `submit_bid`.
+    """
     capacity: int = Field(ge=1, description="Most tasks the bidder can run in this auction")
     unit_price: int = Field(ge=0, description="Price asked per task")
 
 
 class Bid(BidRequest):
-    """:3"""
+    """A bid as stored: the request plus who placed it and when."""
     bidder_id: str
     placed_at: UtcDatetime
 
 
 class Award(Model):
-    """:3"""
+    """What one winning bidder gets from one auction
+
+    The tasks, the price they asked per task, and what they are paid in total
+
+    TODO: with per-task bids an award is one task: replace `task_ids` with `task_id`
+    and drop `unit_price`, keeping `payment`. `Assignment.tasks` and the deploy loop
+    in `AuctionHouse.clear` simplify accordingly.
+    """
     bidder_id: str
     task_ids: tuple[uuid.UUID, ...]
     unit_price: int
@@ -117,7 +149,7 @@ class Award(Model):
 
 
 class Outcome(Model):
-    """:3"""
+    """The result of clearing an auction: who won what, which tasks nobody won, and the welfare of the allocation"""
     awards: tuple[Award, ...]
     unallocated: tuple[uuid.UUID, ...]
     welfare: int
@@ -130,11 +162,12 @@ class Selection(Model):
 
 
 class AuctionStatus(enum.StrEnum):
-    """:3"""
-    OPEN = "open"
-    CLEARING = "clearing"
-    CLEARED = "cleared"
-    FAILED = "failed"
+    """Where an auction is in its life."""
+    OPEN = "open"          # accepting bids until `closes_at`
+    CLEARING = "clearing"  # bids closed; the engine and deployer are running
+    CLEARED = "cleared"    # finished; the outcome is recorded
+    FAILED = "failed"      # the engine failed; its tasks went back to pending
+
 
 
 class AuctionView(Model):
