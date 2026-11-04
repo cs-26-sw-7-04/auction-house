@@ -89,20 +89,21 @@ void enumerate(Search *search, size_t cell)
 
 	int remaining_buyer = search->buyers->demand[j] - search->buyers_used[j];
 	int remaining_seller = search->sellers->capacity[i] - search->sellers_used[i];
+
+
 	int limit = remaining_buyer < remaining_seller ? remaining_buyer : remaining_seller;
 	
 	if (exclude_buyer || exclude_seller) limit = 0;
 
 	for (int k = 0; k <= limit; k++){
-		search->x.quantity[i][j] = k;
-		search->sellers_used[i] += k;
-		search->buyers_used[j] += k;
+
 
 		bool task_available = true;
 		int available_task_index = -1;
-		for (int l = 0; k < search->sellers->capacity[i]; l++){
-			if (search->sellers->tasks[k][l].assigned
-			    || search->sellers->tasks[k][l].flops
+
+		for (int l = 0; l < search->sellers->capacity[i]; l++){
+			if (search->sellers->tasks[i][l].assigned
+			    || search->sellers->tasks[i][l].flops
 			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
 				task_available = false;
 			}else
@@ -112,16 +113,24 @@ void enumerate(Search *search, size_t cell)
 				break;
 			}
 		}
-		if (search->buyers_used[j] <= search->buyers->demand[j]
-		    && search->sellers_used[i] <= search->sellers->capacity[i]
-		    && task_available
-		    && available_task_index > -1){
+		if (!task_available){
+			search->x.quantity[i][j] = k;
 			enumerate(search, cell + 1);
-			search->buyers->used_demand[j] += search->sellers->tasks[k][available_task_index].flops;
+			break;
+		}
+		search->x.quantity[i][j] = k;
+		search->sellers_used[i] += k;
+		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
+		if (search->buyers_used[j] <= search->buyers->demand[j]
+		    && search->sellers_used[i] <= search->sellers->capacity[i]){
+			if (k > 0)
+				search->sellers->tasks[i][available_task_index].assigned = true;
+			enumerate(search, cell + 1);
+			search->sellers->tasks[i][available_task_index].assigned = false;
 		}
 
 		search->sellers_used[i] -= k;
-		search->buyers_used[j] -= k;
+		search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
 	}
 
 	search->x.quantity[i][j] = 0;
@@ -298,40 +307,44 @@ void* multithreaded_branch(void* arg)
 	int j = data->j;
 	size_t cell = data->cell;
 	for (int k = data->start; k < data->end; k++){
-		search->x.quantity[i][j] = k;
-		search->sellers_used[i] += k;
-		search->buyers_used[j] += k;
-		bool should_enumerate =
-			search->buyers_used[j]<= search->buyers->demand[j]
-			&& search->sellers_used[i] <= search->sellers->capacity[i];
-		
 		bool task_available = true;
 		int available_task_index = -1;
+
 		for (int l = 0; l < search->sellers->capacity[i]; l++){
-			if (search->sellers->tasks[k][l].assigned
-			    || search->sellers->tasks[k][l].flops
+			if (search->sellers->tasks[i][l].assigned
+			    || search->sellers->tasks[i][l].flops
 			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
 				task_available = false;
 			}else
 			{
 				task_available = true;
-				available_task_index = k;
+				available_task_index = l;
 				break;
 			}
 		}
-		if (should_enumerate
-		    && task_available
-		    && search->buyers_used[j] <= search->buyers->demand[j]
-		    && search->sellers_used[i] <= search->sellers->capacity[i]
-		    && available_task_index > -1)
+		if (!task_available){
+			search->x.quantity[i][j] = k;
 			enumerate(search, cell + 1);
-
-		/* if (should_enumerate) */
-		/* 	enumerate(search, cell + 1); */
+			break;
+		}
+		search->x.quantity[i][j] = k;
+		search->sellers_used[i] += k;
+		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
+		bool should_enumerate =
+			search->buyers_used[j]<= search->buyers->demand[j]
+			&& search->sellers_used[i] <= search->sellers->capacity[i];
+		
+		if (should_enumerate){
+			if (k > 0)
+				search->sellers->tasks[i][available_task_index].assigned = true;
+			enumerate(search, cell + 1);
+			search->sellers->tasks[i][available_task_index].assigned = false;
+		}
 
 		search->sellers_used[i] -= k;
-		search->buyers_used[j] -= k;
+		search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
 	}
+	search->x.quantity[i][j] = 0;
 	return (void *) 1;
 }
 Optimum optimize_multithreaded (Buyers* buyers, Sellers *sellers, Agent *excluded)

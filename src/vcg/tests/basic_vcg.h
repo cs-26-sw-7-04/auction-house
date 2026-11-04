@@ -56,7 +56,8 @@ TEST basic_vcg_test_1()
 		result = false;
 	if (ar.allocation.rows != 1 || ar.allocation.cols != 3)
 		result = false;
-	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1])
+	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
+	    || ar.allocation.quantity[0][1] != 1)
 		result = false;
 
 	int i = 0;
