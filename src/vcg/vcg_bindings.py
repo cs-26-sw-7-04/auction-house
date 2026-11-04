@@ -49,8 +49,8 @@ vcglib.vcg_auction.argtypes = [Buyers_C, Sellers_C]
 vcglib.vcg_auction.restype = Auction_Results_C
 vcglib.print_allocation.argtypes = [Allocation_C]
 vcglib.print_allocation.restype = None
-
-
+vcglib.assign_tasks.argtypes = [Sellers_C, ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int), ctypes.c_int]
+vcglib.print_allocation.restype = Sellers_C
 
 libc = ctypes.CDLL(None)
 libc.malloc.restype = ctypes.c_void_p
