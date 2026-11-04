@@ -31,10 +31,10 @@ TEST basic_vcg_test_1()
 	B.value[0][1]  = 10;
 	B.value[1] = malloc(sizeof(double) * 2);
 	B.value[1][0]  = 2;
-	B.value[1][0]  = 4;
+	B.value[1][1]  = 4;
 	B.value[2] = malloc(sizeof(double) * 2);
 	B.value[2][0]  = -4000;
-	B.value[1][1]  = 6;
+	B.value[2][1]  = 6;
 
 	Sellers S = {0};
 	S.count       = 1;
@@ -44,9 +44,7 @@ TEST basic_vcg_test_1()
 	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
 	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
-	S.capacity[1] = 0;
-	S.cost[1]     = 0;
-	S.tasks[0][1].flops = 1;
+	S.tasks[1][1].flops = 1;
 
 
 

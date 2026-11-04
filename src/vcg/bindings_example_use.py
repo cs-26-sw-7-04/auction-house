@@ -1,5 +1,5 @@
 from vcg_bindings import *
-
+'''
 B = VCG_buyers_python()
 B.count = 3
 B.demand[0] = 1
@@ -18,3 +18,11 @@ for i in range(0,5):
 allo = vcglib.vcg_auction(B, S)
 vcglib.print_allocation(allo)
 #exit(not (allo.quantity[0][0] == allo.quantity[0][1] == 1))
+'''
+
+auction = Auction(
+        [Seller([Task(0, 1), Task(1, 1)])],
+        [Buyer(1, [5, 10]), Buyer(1, [2, 4]), Buyer(1, [-4000, 6])]
+        )
+
+auction.print_allocation()
