@@ -40,10 +40,12 @@ auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float 
 void print_allocation(Allocation x);
 
 
-Sellers assign_task(Sellers s, int index, int id, int flops){
-	s.tasks[index]		= malloc(sizeof(Task));
-	s.tasks[index]->id	= id;
-	s.tasks[index]->flops	= flops;
+Sellers assign_tasks(Sellers s, int index, int* id, int* flops, int count){
+	s.tasks[index]		= malloc(sizeof(Task) * count);
+	for (int i = 0; i < count; i++){
+		s.tasks[index][i].id	= id[i];
+		s.tasks[index][i].flops	= flops[i];
+	}
 	return s;
 }
 

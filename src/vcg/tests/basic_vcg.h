@@ -44,6 +44,7 @@ TEST basic_vcg_test_1()
 	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
 	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
+	S.tasks[1][0].flops = 1;
 	S.tasks[1][1].flops = 1;
 
 

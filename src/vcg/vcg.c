@@ -101,8 +101,8 @@ void enumerate(Search *search, size_t cell)
 		bool task_available = true;
 		int available_task_index = -1;
 		for (int l = 0; k < search->sellers->capacity[i]; l++){
-			if (search->sellers->tasks[l]->assigned
-			    || search->sellers->tasks[l]->flops
+			if (search->sellers->tasks[k][l].assigned
+			    || search->sellers->tasks[k][l].flops
 			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
 				task_available = false;
 			}else
@@ -117,7 +117,7 @@ void enumerate(Search *search, size_t cell)
 		    && task_available
 		    && available_task_index > -1){
 			enumerate(search, cell + 1);
-			search->buyers->used_demand[j] += search->sellers->tasks[available_task_index]->flops;
+			search->buyers->used_demand[j] += search->sellers->tasks[k][available_task_index].flops;
 		}
 
 		search->sellers_used[i] -= k;
@@ -307,9 +307,9 @@ void* multithreaded_branch(void* arg)
 		
 		bool task_available = true;
 		int available_task_index = -1;
-		for (int k = 0; k < search->sellers->capacity[i]; k++){
-			if (search->sellers->tasks[k]->assigned
-			    || search->sellers->tasks[k]->flops
+		for (int l = 0; l < search->sellers->capacity[i]; l++){
+			if (search->sellers->tasks[k][l].assigned
+			    || search->sellers->tasks[k][l].flops
 			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
 				task_available = false;
 			}else
