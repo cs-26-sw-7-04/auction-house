@@ -40,7 +40,7 @@ async def _run_on_timer(house: AuctionHouse, seconds: float) -> None:
     """:3"""
     while True:
         try:
-            await asyncio.to_thread(house.tick)
+            await asyncio.to_thread(house.tick) # We run baby, ticking the clock of the house
         except Exception:  # keep the timer alive whatever one round does
             log.exception("auction round failed")
         await asyncio.sleep(seconds)

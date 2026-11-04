@@ -4,7 +4,16 @@ import uuid
 from collections import defaultdict
 
 from auction_house import plugins
-from auction_house.domain import Auction, Bid, Task, TaskStatus, UnknownAuction, UnknownTask
+from auction_house.domain import (
+    Auction,
+    Bid,
+    Task,
+    TaskStatus,
+    UnknownAuction,
+    UnknownTask,
+)
+
+# TODO: Reimplement another port `stores_redis.py` using redis in memory database
 
 
 @plugins.tasks.register("memory")

@@ -30,11 +30,13 @@ def submit_task(spec: TaskSpec, owner: Submitter, house: House) -> Task:
 
 @submitters.get("")
 def my_tasks(owner: Submitter, house: House) -> list[Task]:
+    """:3"""
     return house.tasks_of(owner)
 
 
 @submitters.get("/{task_id}")
 def my_task(task_id: uuid.UUID, owner: Submitter, house: House) -> Task:
+    """:3"""
     return house.get_task(task_id, owner)
 
 
@@ -46,6 +48,7 @@ def list_auctions(house: House) -> list[AuctionView]:
 
 @bidders.get("/auctions/{auction_id}")
 def get_auction(auction_id: uuid.UUID, house: House) -> AuctionView:
+    """:3"""
     return house.view(house.get_auction(auction_id))
 
 
