@@ -1,9 +1,9 @@
 """The HTTP surface, one router per role."""
 import uuid
-
+ 
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
-
+ 
 from auction_house.api.deps import Bidder, House, Operator, Submitter
 from auction_house.domain import (
     Assignment,
@@ -54,27 +54,21 @@ def get_auction(auction_id: uuid.UUID, house: House) -> AuctionView:
     return house.view(house.get_auction(auction_id))
 
 
-# TODO: bidding is per auction, one bid per bidder. The intended model is a bid per
-# task, so these two endpoints change. Proposed:
-#   PUT /auctions/{auction_id}/tasks/{task_id}/bid   place or replace one bid
-#   GET /auctions/{auction_id}/bids                  your bids in this auction
-# The GET then returns a list (empty when you have not bid), so `my_bid` no longer
-# needs to set a 404 by hand, which the generated OpenAPI spec does not show today.
-# See the TODOs on `AuctionHouse.submit_bid` and `BidRequest`.
-@bidders.put("/auctions/{auction_id}/bid", status_code=status.HTTP_204_NO_CONTENT)
-def place_bid(auction_id: uuid.UUID, request: BidRequest, bidder_id: Bidder, house: House) -> Response:
-    """Place or replace your sealed bid while the auction is open."""
-    house.submit_bid(auction_id, bidder_id, request)
+@bidders.put("/auctions/{auction_id}/tasks/{task_id}/bid", status_code=status.HTTP_204_NO_CONTENT)
+def place_bid(
+    auction_id: uuid.UUID, task_id: uuid.UUID, request: BidRequest, bidder_id: Bidder, house: House
+) -> Response:
+    """Place or replace your sealed bid on one task of an open auction. You can bid
+    on as many of its tasks as you like."""
+    house.submit_bid(auction_id, task_id, bidder_id, request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@bidders.get("/auctions/{auction_id}/bid")
-def my_bid(auction_id: uuid.UUID, bidder_id: Bidder, house: House, response: Response) -> Bid | None:
-    """Read back your own bid. Nobody else's is readable."""
-    bid = house.own_bid(auction_id, bidder_id)
-    if bid is None:
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return bid
+@bidders.get("/auctions/{auction_id}/bids")
+def my_bids(auction_id: uuid.UUID, bidder_id: Bidder, house: House) -> list[Bid]:
+    """Read back your own bids in this auction. Nobody else's are readable."""
+    return house.own_bids(auction_id, bidder_id)
+
 
 
 @bidders.get("/assignments")

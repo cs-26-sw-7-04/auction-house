@@ -1,7 +1,8 @@
 """Solvers: choose the welfare-maximising allocation.
 
-The model: each task is worth its submitter's budget, each bidder offers up to
-`capacity` slots at a flat `unit_price`.
+The model: each task is worth its submitter's budget, and each bid asks a price to
+run one task. Bids on different tasks do not interact, so a task's outcome depends
+only on the bids for it.
 """
 import uuid
 from collections.abc import Mapping, Sequence
@@ -11,27 +12,26 @@ from auction_house.domain import Bid, Selection
 
 
 def welfare_of(values: Mapping[uuid.UUID, int], bids: Sequence[Bid], assignment: Mapping[uuid.UUID, str]) -> int:
-    """:3"""
-    price = {b.bidder_id: b.unit_price for b in bids}
-    return sum(values[task] - price[bidder] for task, bidder in assignment.items())
+    """The welfare of an assignment: each assigned task's value less the price the
+    winning bidder asked for it."""
+    price = {(b.task_id, b.bidder_id): b.price for b in bids}
+    return sum(values[task] - price[(task, bidder)] for task, bidder in assignment.items())
 
 
 @plugins.solvers.register("sorted")
 class SortedSolver:
-    """Exact and fast. With unit demand and flat prices, pairing the most
-    valuable tasks with the cheapest slots is optimal, so nothing is enumerated."""
+    """Exact and fast. Tasks do not interact, so the best allocation gives each
+    task to its cheapest bid; nothing is enumerated."""
 
     def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Selection:
-        """:3"""
-        slots = sorted(
-            (bid.unit_price, bid.bidder_id)
-            for bid in bids
-            for _ in range(min(bid.capacity, len(values)))
-        )
-        tasks = sorted(values, key=lambda t: (-values[t], t))
-        assignment: dict[uuid.UUID, str] = {}
-        for task, (price, bidder_id) in zip(tasks, slots):
-            if values[task] <= price:
-                break
-            assignment[task] = bidder_id
+        """Give each task to its cheapest bid, if that is below the task's value.
+        Ties go to the lowest bidder id. Bids on tasks not in `values` are ignored."""
+        cheapest: dict[uuid.UUID, Bid] = {}
+        for bid in bids:
+            if bid.task_id not in values:
+                continue
+            current = cheapest.get(bid.task_id)
+            if current is None or (bid.price, bid.bidder_id) < (current.price, current.bidder_id):
+                cheapest[bid.task_id] = bid
+        assignment = {task: bid.bidder_id for task, bid in cheapest.items() if values[task] > bid.price}
         return Selection(assignment=assignment, welfare=welfare_of(values, bids, assignment))

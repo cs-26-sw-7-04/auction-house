@@ -38,8 +38,9 @@ class AuctionStore(Protocol):
 class BidPool(Protocol):
     """Sealed storage. The house reads `all` only when it clears."""
     def put(self, auction_id: uuid.UUID, bid: Bid) -> None:
-        """Store the bid, replacing the bidder's earlier one."""
-    def get(self, auction_id: uuid.UUID, bidder_id: str) -> Bid | None: ...
+        """Store the bid, replacing the same bidder's earlier bid on the same task."""
+    def of(self, auction_id: uuid.UUID, bidder_id: str) -> list[Bid]:
+        """The bids this bidder has placed in the auction."""
     def all(self, auction_id: uuid.UUID) -> list[Bid]: ...
 
 
@@ -59,7 +60,7 @@ class Eligibility(Protocol):
 class Solver(Protocol):
     def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid]) -> Selection:
         """Allocate tasks (valued by their submitters) to bidders for maximal
-        welfare. A bidder gets at most `capacity` tasks, at `unit_price` each."""
+        welfare. A bid is for one task, and each task goes to at most one bidder."""
 
 
 @runtime_checkable

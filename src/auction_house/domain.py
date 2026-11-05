@@ -106,50 +106,30 @@ class TaskOffer(Model):
 # --- Bids and outcomes ---------------------------------------------------------
 
 class BidRequest(Model):
-    """Sealed: only the bidder who placed it and the house can read it.
-    
-    TODO: a bid currently covers a whole auction: `capacity` and `unit_price` apply
-    to every task the bidder wins. The intended model is a bid per task. Proposed:
- 
-        class BidRequest(Model):
-            price: int = Field(ge=0, description="Price asked to run this task")
- 
-        class Bid(BidRequest):
-            task_id: uuid.UUID
-            bidder_id: str
-            placed_at: UtcDatetime
- 
-    `task_id` comes from the URL in the request, so it is only on the stored `Bid`.
-    Open question: what replaces `capacity`? Without any coupling between tasks, the
-    solver reduces to the cheapest ask per task. See the TODO on `submit_bid`.
-    """
-    capacity: int = Field(ge=1, description="Most tasks the bidder can run in this auction")
-    unit_price: int = Field(ge=0, description="Price asked per task")
+    """Sealed: only the bidder who placed it and the house can read it. The task it
+    is for is supplied separately; see `Bid`."""
+    #capacity: int = Field(ge=1, description="Most tasks the bidder can run in this auction")
+    price: int = Field(ge=0, description="Price asked to run task")
 
 
 class Bid(BidRequest):
-    """A bid as stored: the request plus who placed it and when."""
+    """A bid as stored: the request plus the task it is for, who placed it and when."""
+    task_id: uuid.UUID
     bidder_id: str
     placed_at: UtcDatetime
 
 
 class Award(Model):
-    """What one winning bidder gets from one auction
-
-    The tasks, the price they asked per task, and what they are paid in total
-
-    TODO: with per-task bids an award is one task: replace `task_ids` with `task_id`
-    and drop `unit_price`, keeping `payment`. `Assignment.tasks` and the deploy loop
-    in `AuctionHouse.clear` simplify accordingly.
-    """
+    """One task awarded to one bidder, and what the bidder is paid for it, which the
+    clearing rule may set above or below the price asked."""
+    task_id: uuid.UUID
     bidder_id: str
-    task_ids: tuple[uuid.UUID, ...]
-    unit_price: int
-    payment: int = Field(description="What the bidder is paid in total, by the clearing rule")
+    payment: int
 
 
 class Outcome(Model):
-    """The result of clearing an auction: who won what, which tasks nobody won, and the welfare of the allocation"""
+    """The result of clearing an auction: who won what, which tasks nobody won, 
+    and the welfare of the allocation (task values less the winners' asks)."""
     awards: tuple[Award, ...]
     unallocated: tuple[uuid.UUID, ...]
     welfare: int
@@ -167,7 +147,6 @@ class AuctionStatus(enum.StrEnum):
     CLEARING = "clearing"  # bids closed; the engine and deployer are running
     CLEARED = "cleared"    # finished; the outcome is recorded
     FAILED = "failed"      # the engine failed; its tasks went back to pending
-
 
 
 class AuctionView(Model):
@@ -189,29 +168,31 @@ class Auction(Model):
 
 
 class Assignment(Model):
-    """An award as the winning bidder sees it, with the payloads it may now run."""
+    """An award as the winning bidder sees it, with the payload it may now run."""
     auction_id: uuid.UUID
     award: Award
-    tasks: tuple[Task, ...]
+    task: Task
 
 
 # --- Errors ----------------------------------------------------------------------
 
 class AuctionHouseError(Exception):
     """Base of everything the house raises on purpose."""
-
-
+ 
+ 
 class NotFound(AuctionHouseError): ...
 class Conflict(AuctionHouseError): ...
 class Invalid(AuctionHouseError): ...
 class Forbidden(AuctionHouseError): ...
 class Unavailable(AuctionHouseError): ...
-
-
+ 
+ 
 class UnknownTask(NotFound): ...
 class UnknownAuction(NotFound): ...
 class AuctionClosed(Conflict): ...
 class InvalidTask(Invalid): ...
+class InvalidBid(Invalid): ...
 class IneligibleBid(Invalid): ...
 class NotAssigned(Forbidden): ...
 class SolverError(Unavailable): ...
+

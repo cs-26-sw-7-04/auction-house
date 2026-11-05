@@ -1,5 +1,5 @@
 """The auction house: the one place where the flow of an auction is written down.
-
+ 
 It owns no storage and makes no assumptions about how auctions are cleared or
 tasks run; everything it needs comes in as a port (see `ports.py`).
 """
@@ -9,7 +9,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-
+ 
 from auction_house import ports
 from auction_house.domain import (
     Assignment,
@@ -20,6 +20,7 @@ from auction_house.domain import (
     Bid,
     BidRequest,
     IneligibleBid,
+    InvalidBid,
     InvalidTask,
     NotAssigned,
     Task,
@@ -35,18 +36,19 @@ log = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class Components:
-    """The ports/components that the auction house depends on.
-    Spesific implementations that are plug and play."""
-    tasks: ports.TaskStore
-    auctions: ports.AuctionStore
-    bids: ports.BidPool
-    bundler: ports.Bundler
-    eligibility: ports.Eligibility
-    engine: ports.ClearingEngine
-    deployer: ports.Deployer
-    verifier: ports.Verifier
-    ledger: ports.Ledger
-    notifier: ports.Notifier
+    """The ports the house depends on, bundled so they can be swapped as a unit
+    (e.g. in-memory implementations for tests, real ones in production)."""
+
+    tasks: ports.TaskStore          # persistence of tasks
+    auctions: ports.AuctionStore    # persistence of auctions
+    bids: ports.BidPool             # sealed bids, one per bidder and task
+    bundler: ports.Bundler          # groups pending tasks into collections, one auction each
+    eligibility: ports.Eligibility  # decides whether a bidder may bid on a task
+    engine: ports.ClearingEngine    # decides winners and prices from the bids
+    deployer: ports.Deployer        # starts a won task on the winner's infrastructure
+    verifier: ports.Verifier        # checks a reported result
+    ledger: ports.Ledger            # records whether each bidder delivered
+    notifier: ports.Notifier        # outbound events (auction opened / closed)
 
 
 class AuctionHouse:
@@ -77,12 +79,13 @@ class AuctionHouse:
     # --- submitters -----------------------------------------------------------
 
     def submit_task(self, owner: str, spec: TaskSpec) -> Task:
-        """:3 register a new task as pending to the auction"""
+        """Register a new task as pending. It enters an auction on the next `open_auctions`."""
         if spec.deadline <= self.clock():
             raise InvalidTask("deadline must be in the future")
         task = Task(task_id=uuid.uuid4(), owner=owner, spec=spec, submitted_at=self.clock())
         self.c.tasks.add(task)
         return task
+
 
     def get_task(self, task_id: uuid.UUID, owner: str) -> Task:
         """:3 return one of the task owner's task"""
@@ -113,42 +116,45 @@ class AuctionHouse:
                 )
                 # put tasks to auction
                 for task in collection:
+                    # `rounds` counts auctions entered; `_requeue_or_give_up` checks it against `max_rounds`.
                     self._set(task.task_id, status=TaskStatus.IN_AUCTION, rounds=task.rounds + 1,
                               auction_id=auction.auction_id)
                 self.c.auctions.put(auction)
                 opened.append(auction)
+
         # We want to notify the outside that a auction ahs opened, such that a slwo notifier cannot block other operations
         for auction in opened:
             self.c.notifier.auction_opened(auction)
         return opened
 
-    def submit_bid(self, auction_id: uuid.UUID, bidder_id: str, request: BidRequest) -> Bid:
-        """:3 Place a bid, replacing the bidders ealier bid for a task in the auction"""
-        # TODO: bidding is per auction, one bid per bidder. The intended model is that a
-        # bidder bids on individual tasks in an auction (any number of them) and the
-        # solver works out the allocation.
-        # Change BidPool (auction_id, bidder_id, task_id) instead of (auction_id, bidder_id); `put`, `get` and `all` change with it
-        # `Bid` / `BidRequest`: carry a task_id and a per-task price instead of `capacity` and `unit_price`.
-        # `submit_bid`: check eligibility only for the task being bid on, not for every task in the auction.
-        # `own_bid` and the bid endpoints: return and accept several bids.
-        # `Solver` / `ClearingEngine`: take per-task bids; drop the capacity and unit_price assumption.
+
+    def submit_bid(self, auction_id: uuid.UUID, task_id: uuid.UUID, bidder_id: str, request: BidRequest) -> Bid:
+        """:3 Place a bid on one task of an open auction, replacing the bidder's earlier
+        bid on that task. A bidder can bid on any number of the auction's tasks.
+        """
 
         with self._lock:
             auction = self.c.auctions.get(auction_id)
+            # Check both the stored status and the clock: the status only changes
+            # when someone clears the auction, which may happen after `closes_at`.
             if auction.status is not AuctionStatus.OPEN or self.clock() >= auction.closes_at:
                 raise AuctionClosed(f"auction {auction_id} is not accepting bids")
-            for task_id in auction.task_ids:
-                if not self.c.eligibility.is_eligible(bidder_id, self.c.tasks.get(task_id)):
-                    raise IneligibleBid(f"not eligible for task {task_id}")
-            bid = Bid(bidder_id=bidder_id, placed_at=self.clock(), **request.model_dump())
+            if task_id not in auction.task_ids:
+                raise InvalidBid(f"task {task_id} is not in auction {auction_id}")
+            if not self.c.eligibility.is_eligible(bidder_id, self.c.tasks.get(task_id)):
+                raise IneligibleBid(f"not eligible for task {task_id}")
+            bid = Bid(task_id=task_id, bidder_id=bidder_id, placed_at=self.clock(), **request.model_dump())
             self.c.bids.put(auction_id, bid)
             return bid
 
+
     def own_bid(self, auction_id: uuid.UUID, bidder_id: str) -> Bid | None:
-        """:3 The bidder's own bid, or None if they have not bid. Bids are sealed, so
-        there is no way to read anyone else's."""
-        self.c.auctions.get(auction_id)
-        return self.c.bids.get(auction_id, bidder_id)
+        """:3 The bidder's own bids in the auction. Bids are sealed, so there is no way
+        to read anyone else's."""
+
+        self.c.auctions.get(auction_id)  # rejser en error hvis en auction ikke findes
+        return self.c.bids.of(auction_id, bidder_id)
+
 
     def clear(self, auction_id: uuid.UUID, *, force: bool = False) -> Auction:
         """Clear the auction and hand the winning tasks to the deployer.
@@ -183,15 +189,15 @@ class AuctionHouse:
         # (not under lock), dispatch tasks to external systems
         handles: dict[uuid.UUID, str] = {}
         for award in outcome.awards:
-            for task_id in award.task_ids:
-                try:
-                    handle = self.c.deployer.deploy(tasks[task_id], award)
-                except Exception:  # one failed dispatch must not block the other winners
-                    log.exception("deploying task %s to %s failed", task_id, award.bidder_id)
-                    self._set(task_id, status=TaskStatus.FAILED, bidder_id=award.bidder_id)
-                else:
-                    handles[task_id] = handle
-                    self._set(task_id, status=TaskStatus.EXECUTING, bidder_id=award.bidder_id, handle=handle)
+            try:
+                handle = self.c.deployer.deploy(tasks[award.task_id], award)
+            except Exception:  # one failed dispatch must not block the other winners
+                log.exception("deploying task %s to %s failed", award.task_id, award.bidder_id)
+                self._set(award.task_id, status=TaskStatus.FAILED, bidder_id=award.bidder_id)
+            else:
+                handles[award.task_id] = handle
+                self._set(award.task_id, status=TaskStatus.EXECUTING, bidder_id=award.bidder_id, handle=handle)
+
         
         # with lock, handle that nobody won and record outcome to notifier
         with self._lock:
@@ -211,7 +217,7 @@ class AuctionHouse:
             try:
                 cleared.append(self.clear(auction_id))
             except Exception:
-                # The auction failed, but is caught, must not stop the others from being cleared though.
+                # One broken auction must not stop the others from being cleared.
                 log.exception("clearing auction %s failed", auction_id)
         return cleared
 
@@ -241,10 +247,9 @@ class AuctionHouse:
                            closes_at=auction.closes_at, tasks=offers)
 
     def assignments_of(self, bidder_id: str) -> list[Assignment]:
-        """Every award the bidder has won, across all cleared auctions, with its tasks."""
+        """Every task the bidder has won, across all cleared auctions."""
         return [
-            Assignment(auction_id=a.auction_id, award=award,
-                       tasks=tuple(self.c.tasks.get(t) for t in award.task_ids))
+            Assignment(auction_id=a.auction_id, award=award, task=self.c.tasks.get(award.task_id))
             for a in self.c.auctions.all() if a.outcome
             for award in a.outcome.awards if award.bidder_id == bidder_id
         ]
@@ -267,14 +272,13 @@ class AuctionHouse:
 
     def _set(self, task_id: uuid.UUID, **changes) -> Task:
         """Apply `changes` to the stored task, persist it, and return the updated copy.
-        A task omdel is immutable, so it replaces it instead of mutating it."""
+        Tasks are immutable models, so this replaces rather than mutates."""
         task = self.c.tasks.get(task_id).model_copy(update=changes)
         self.c.tasks.update(task)
         return task
 
     def _save(self, auction: Auction, **changes) -> Auction:
-        """Apply `changes` to an auction, persist the copy, and return it.
-        **changes -> receives a variable amount of function parametres."""
+        """Apply `changes` to an auction, persist the copy, and return it."""
         auction = auction.model_copy(update=changes)
         self.c.auctions.put(auction)
         return auction
