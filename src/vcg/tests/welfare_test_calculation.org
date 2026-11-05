@@ -1,0 +1,24 @@
+#+title: calculation for expected welfare
+\(B = \{1,2,3\}\)
+\(S = \{1,2\}\)
+\(x_1 = \left ( \begin{matrix}
+1&0&1\\
+0&0&0\\
+\end{matrix}\right )\)
+\(v_1 = (5,2,3)\)
+\(c_1 = (1,0)\)
+
+\begin{equation}
+W(x) = \sum_{j\in B}{v_j \left(\sum_{i\in S}{x_{ij}}\right)} -
+\sum_{i\in S}{c_i \left(\sum_{j\in B}{x_{ij}}\right)}
+\end{equation}
+
+\begin{align}
+W(x_1) =\sum_{j\in B}{v_{1j} \left(\sum_{i\in S}{x_{1ij}}\right)} -
+\sum_{i\in S}{c_{1i} \left(\sum_{j\in B}{x_{1ij}}\right)}
+\\
+=(5 (1+0) + 2 (0+0) + 3 (1+0)) - (1(1+0+1) + 0(0+0+0))\\
+= 8 - 2\\
+= 6
+\end{align}
+

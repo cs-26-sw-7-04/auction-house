@@ -3,21 +3,12 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 #include "vcg.h"
 
 #ifndef PROCS
 #define PROCS 1
 #endif
-
-typedef enum {
-	AGENT_BUYER,
-	AGENT_SELLER
-} Agent_type;
-
-typedef struct {
-	Agent_type type;
-	size_t index;
-} Agent;
 
 typedef struct {
 	Allocation allocation;
@@ -37,10 +28,18 @@ double welfare(Buyers* buyers, Sellers* sellers, Allocation *x, Agent *excluded)
 			int q = x->quantity[i][j];
 
 			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;
-			bool exclude_seller = excluded != NULL && excluded->type == AGENT_SELLER && excluded->index == i;
 
-			if (!exclude_buyer) total  += q*buyers->value[j];
-			if (!exclude_seller) total += q*sellers->cost[i];
+			
+			if (!exclude_buyer && buyers->value[j] != NULL) total  += buyers->value[j][q-1];
+
+		}
+	}
+	for (size_t i = 0; i < sellers->count; i++){
+		for (size_t j = 0; j < buyers->count; j++){
+			int q = x->quantity[i][j];
+			bool exclude_seller = excluded != NULL && excluded->type == AGENT_SELLER && excluded->index == i;
+		
+			if (!exclude_seller) total -= q*sellers->cost[i];
 		}
 	}
 	return total;
@@ -60,49 +59,78 @@ typedef struct {
 
 void enumerate(Search *search, size_t cell)
 {
-	int cols = search->buyers->count;
-	int rows = search->sellers->count;
+	
+	size_t cols = search->buyers->count;
+	size_t rows = search->sellers->count;
+
+	if (cols == 0) return;
+
 	size_t cell_count = cols * rows;
 
-	size_t i = cell / cols;
-	size_t j = cell % cols;
 	if (cell == cell_count){
 		double w = welfare(search->buyers, search->sellers, &search->x, search->excluded);
 		if (!search->best.found || w > search->best.welfare){
 			search->best.found = true;
 			search->best.welfare = w;
 			search->best.allocation = search->x;
-		        Agent buyer = {.index = j, .type = AGENT_BUYER};
-			Agent seller = {.index = i, .type = AGENT_SELLER};
-			search->best.buyer = buyer;
-			search->best.seller = seller;
 		}
 		return;
 	}
+	size_t i = cell / cols;
+	size_t j = cell % cols;
+
        
 
-	bool exclude_buyer  = search->excluded != NULL && search->excluded->type == AGENT_BUYER  && search->excluded->index == j;
-	bool exclude_seller = search->excluded != NULL && search->excluded->type == AGENT_SELLER && search->excluded->index == i;
-
-	/* int remaining_buyer = search->buyers->value[j] - search->buyers_used[j]; */
-	/* int remaining_seller = search->sellers->cost[i] - search->sellers_used[i]; */
+	bool exclude_buyer  = search->excluded != NULL && 
+	                      search->excluded->type == AGENT_BUYER  && 
+						  search->excluded->index == j;
+	bool exclude_seller = search->excluded != NULL && 
+	                      search->excluded->type == AGENT_SELLER && search->excluded->index == i;
 
 	int remaining_buyer = search->buyers->demand[j] - search->buyers_used[j];
 	int remaining_seller = search->sellers->capacity[i] - search->sellers_used[i];
+
+
 	int limit = remaining_buyer < remaining_seller ? remaining_buyer : remaining_seller;
 	
 	if (exclude_buyer || exclude_seller) limit = 0;
 
 	for (int k = 0; k <= limit; k++){
+
+
+		bool task_available = true;
+		int available_task_index = -1;
+
+		for (int l = 0; l < search->sellers->capacity[i]; l++){
+			if (search->sellers->tasks[i][l].assigned
+			    || search->sellers->tasks[i][l].flops
+			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
+				task_available = false;
+			}else
+			{
+				task_available = true;
+				available_task_index = l;
+				break;
+			}
+		}
+		if (!task_available){
+			search->x.quantity[i][j] = k;
+			enumerate(search, cell + 1);
+			break;
+		}
 		search->x.quantity[i][j] = k;
 		search->sellers_used[i] += k;
-		search->buyers_used[j] += k;
-
-		if (search->buyers_used[j] <= search->buyers->demand[j] && search->sellers_used[i] <= search->sellers->capacity[i])
+		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
+		if (search->buyers_used[j] <= search->buyers->demand[j]
+		    && search->sellers_used[i] <= search->sellers->capacity[i]){
+			if (k > 0)
+				search->sellers->tasks[i][available_task_index].assigned = true;
 			enumerate(search, cell + 1);
+			search->sellers->tasks[i][available_task_index].assigned = false;
+		}
 
 		search->sellers_used[i] -= k;
-		search->buyers_used[j] -= k;
+		search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
 	}
 
 	search->x.quantity[i][j] = 0;
@@ -128,35 +156,51 @@ double pivot_transfer(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agen
 
 	if (!agentless.found) return 0.0;
 
-	return wo - agentless.welfare;
+	return  agentless.welfare - wo;
 }
 
-Allocation vcg_auction(Buyers buyers, Sellers sellers)
+auction_results vcg_auction(Buyers buyers, Sellers sellers)
 {
-	Allocation a = {0};
+	auction_results ar = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
-		return a;
+		return ar;
 	}
 
 	Optimum result = optimize(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
-		return a;
+		return ar;
 	}
 
+	double *prices = malloc(sizeof(double) * buyers.count);
+	for (size_t j = 0; j < buyers.count; ++j) {
+		prices[j] = 0;
+		for (size_t k = 0; k < sellers.count; k++){
+			if (result.allocation.quantity[k][j]){
+				Agent agent = { .type = AGENT_BUYER, .index = j };
+				prices[j] = pivot_transfer(&buyers, &sellers, &result.allocation, agent);
+			}
+		}
+	}
+
+	double *costs = malloc(sizeof(double) * sellers.count);
+	for (size_t i = 0; i < sellers.count; ++i) {
+		costs[i] = 0;
+		for (size_t j = 0; j < buyers.count; ++j){
+			if (result.allocation.quantity[i][j]){
+				Agent agent = { .type = AGENT_SELLER, .index = i };
+				costs[i] = pivot_transfer(&buyers, &sellers, &result.allocation, agent);
+
+			}
+		}
+	}
 	
-	/* for (size_t j = 0; j < buyers.count; ++j) { */
-	/* 	Agent agent = { .type = AGENT_BUYER, .index = j }; */
-	/* 	pivot_transfer(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
+	ar.buyer_payments  = prices;
+	ar.seller_payments = costs;
+	ar.allocation = result.allocation;
 
-	/* for (size_t i = 0; i < sellers.count; ++i) { */
-	/* 	Agent agent = { .type = AGENT_SELLER, .index = i }; */
-	/* 	pivot_transfer(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
-
-	return result.allocation;
+	return ar;
 }
 
 
@@ -193,7 +237,7 @@ void* multithreaded_branch(void* arg);
 
 void enumerate_multithreaded(Search *search, size_t cell)
 {
-	int cols = search->buyers->count;
+	size_t cols = search->buyers->count;
 	size_t i = cell / cols;
 	size_t j = cell % cols;
 
@@ -201,7 +245,7 @@ void enumerate_multithreaded(Search *search, size_t cell)
 	int remaining_seller = search->sellers->capacity[i] - search->sellers_used[i];
 	
 	int limit = remaining_buyer < remaining_seller ? remaining_buyer : remaining_seller;
-	if (limit + 1 < PROCS*2){
+	if (remaining_buyer > PROCS || remaining_seller > PROCS){
 		enumerate(search, cell);
 		return;
 	}
@@ -263,18 +307,44 @@ void* multithreaded_branch(void* arg)
 	int j = data->j;
 	size_t cell = data->cell;
 	for (int k = data->start; k < data->end; k++){
+		bool task_available = true;
+		int available_task_index = -1;
+
+		for (int l = 0; l < search->sellers->capacity[i]; l++){
+			if (search->sellers->tasks[i][l].assigned
+			    || search->sellers->tasks[i][l].flops
+			    > search->buyers->demand[j] - search->buyers->used_demand[j]){
+				task_available = false;
+			}else
+			{
+				task_available = true;
+				available_task_index = l;
+				break;
+			}
+		}
+		if (!task_available){
+			search->x.quantity[i][j] = k;
+			enumerate(search, cell + 1);
+			break;
+		}
 		search->x.quantity[i][j] = k;
 		search->sellers_used[i] += k;
-		search->buyers_used[j] += k;
+		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
 		bool should_enumerate =
 			search->buyers_used[j]<= search->buyers->demand[j]
 			&& search->sellers_used[i] <= search->sellers->capacity[i];
-		if (should_enumerate)
+		
+		if (should_enumerate){
+			if (k > 0)
+				search->sellers->tasks[i][available_task_index].assigned = true;
 			enumerate(search, cell + 1);
+			search->sellers->tasks[i][available_task_index].assigned = false;
+		}
 
 		search->sellers_used[i] -= k;
-		search->buyers_used[j] -= k;
+		search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
 	}
+	search->x.quantity[i][j] = 0;
 	return (void *) 1;
 }
 Optimum optimize_multithreaded (Buyers* buyers, Sellers *sellers, Agent *excluded)
@@ -292,41 +362,65 @@ Optimum optimize_multithreaded (Buyers* buyers, Sellers *sellers, Agent *exclude
 
 double pivot_transfer_multithreaded(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agent removed)
 {
-	double wo = welfare(buyers, sellers, chosen, &removed);
+	double wo = welfare(buyers, sellers, chosen, NULL);
 	Optimum agentless = optimize_multithreaded(buyers, sellers, &removed);
 
 	if (!agentless.found) return 0.0;
 
-	return wo - agentless.welfare;
+	return  agentless.welfare - wo;
 }
 
 
-Allocation vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
+auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 {
 	int procs = (int) PROCS;
 	printf("PROCS: %d\n",procs);
-	Allocation a = {0};
+	auction_results ar = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
-		return a;
+		return ar;
 	}
 
 	Optimum result = optimize_multithreaded(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
-		return a;
+		return ar;
 	}
 
+	double *prices = malloc(sizeof(double) * buyers.count);
+	for (size_t j = 0; j < buyers.count; ++j) {
+		prices[j] = 0;
+		for (size_t k = 0; k < sellers.count; k++){
+			if (result.allocation.quantity[k][j]){
+				Agent agent = { .type = AGENT_BUYER, .index = j };
+				prices[j] = pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent);
+			}
+		}
+	}
+
+	double *costs = malloc(sizeof(double) * sellers.count);
+	for (size_t i = 0; i < sellers.count; ++i) {
+		for (size_t j = 0; j < buyers.count; ++j){
+			if (result.allocation.quantity[i][j]){
+				Agent agent = { .type = AGENT_SELLER, .index = i };
+				costs[i] = pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent);
+
+			}
+		}
+	}
 	
-	/* for (size_t j = 0; j < buyers.count; ++j) { */
-	/* 	Agent agent = { .type = AGENT_BUYER, .index = j }; */
-	/* 	pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
+	ar.buyer_payments = prices;
+	ar.seller_payments = costs;
+	ar.allocation = result.allocation;
 
-	/* for (size_t i = 0; i < sellers.count; ++i) { */
-	/* 	Agent agent = { .type = AGENT_SELLER, .index = i }; */
-	/* 	pivot_transfer_multithreaded(&buyers, &sellers, &result.allocation, agent); */
-	/* } */
+	return ar;
+}
 
-	return result.allocation;
+auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha)
+{
+	(void) buyers;
+	(void) sellers;
+	(void) alpha;
+	auction_results ar = {0};
+	return ar;
 }
