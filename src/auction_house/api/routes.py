@@ -1,9 +1,9 @@
 """The HTTP surface, one router per role."""
 import uuid
- 
+
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
- 
+
 from auction_house.api.deps import Bidder, House, Operator, Submitter
 from auction_house.domain import (
     Assignment,

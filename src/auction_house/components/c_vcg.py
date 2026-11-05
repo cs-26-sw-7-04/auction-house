@@ -63,4 +63,3 @@ class CVcgSolver:
             raise SolverError("the C solver returned no allocation")
         # quantity[i][0]: whether seller i (the i-th bid) supplies the task.
         return next((bid for i, bid in enumerate(bids) if allocation.quantity[i][0] > 0), None)
-

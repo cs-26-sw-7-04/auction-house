@@ -40,17 +40,21 @@ testpaths = ["tests"]
 pythonpath = ["src", "."]
 
 
+[tool.ruff]
+extend-exclude = ["tests"]
+
 [tool.ruff.lint]
 ignore = ["UP017"]
-extend-exclude = ["tests"]
 
 [tool.pylint.main]
 disable = [
     "fixme",
     "missing-module-docstring",
     "missing-class-docstring",
-    #"missing-function-docstring",
+    "missing-function-docstring",
     "W0105",
 ]
 ignore-paths = ["^tests/"]
-max-line-length=160
+
+[tool.pylint.format]
+max-line-length = 160
