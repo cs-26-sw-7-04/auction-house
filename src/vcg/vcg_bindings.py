@@ -19,7 +19,10 @@ class Buyers_C(ctypes.Structure):
     _fields_ = [("count",ctypes.c_size_t),
                 ("demand",ctypes.c_int * MAX_AGENTS),
                 ("used_demand", ctypes.c_int * MAX_AGENTS),
-                ("value",(ctypes.POINTER(ctypes.c_double) * MAX_AGENTS))]   
+                ("value",(ctypes.POINTER(ctypes.c_double) * MAX_AGENTS)),
+                ("tasks_count",ctypes.c_size_t*MAX_AGENTS),
+                ("tasks_cap",ctypes.c_size_t*MAX_AGENTS),
+                ("allocated_tasks",POINTER(ctypes.c_int)*MAX_AGENTS)]
     def __repr__(self):
         return f"Buyers_C(count: {self.count}, demand: {self.demand}, used_demand: {self.used_demand}, value: {self.value})"
 
@@ -41,7 +44,10 @@ class Sellers_C(ctypes.Structure):
 class Auction_Results_C(ctypes.Structure):
     _fields_ = [("buyer_payments", ctypes.POINTER(ctypes.c_double)),
                 ("seller_payments", ctypes.POINTER(ctypes.c_double)),
-                ("allocation", Allocation_C)]
+                ("allocation", Allocation_C),
+                ("tasks_count", ctypes.c_size_t * MAX_AGENTS),
+                ("tasks_cap", ctypes.c_size_t*MAX_AGENTS),
+                ("allocated_tasks", ctypes.POINTER(ctypes.c_int)*MAX_AGENTS)]
     def __repr__(self):
         return f"Auction_Results_C(buyer_payments: {self.buyer_payments}, seller_payments: {self.seller_payments}, allocation: {self.allocation})"
 
@@ -51,6 +57,12 @@ vcglib.print_allocation.argtypes = [Allocation_C]
 vcglib.print_allocation.restype = None
 vcglib.assign_tasks.argtypes = [Sellers_C, ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int), ctypes.c_int]
 vcglib.print_allocation.restype = Sellers_C
+vcglib.welfare.argtypes = [
+    ctypes.POINTER(Buyers_C),
+    ctypes.POINTER(Sellers_C),
+    ctypes.POINTER(Allocation_C),
+    ctypes.c_voidp]
+vcglib.welfare.restype = ctypes.c_double;
 
 libc = ctypes.CDLL(None)
 libc.malloc.restype = ctypes.c_void_p
@@ -86,7 +98,20 @@ class Seller:
     def __repr__(self):
         return f"Seller({self.tasks}, {self.cost})"
 
-class Auction:
+
+class AuctionResults:
+    c_allocation: Allocation_C
+    welfare: float
+    mappings: Dict[int, int]
+
+    def __init__(self, c_b: Buyers_C, c_s: Sellers_C, c_auct: Auction_Results_C):
+        self.c_allocation = c_auct.allocation
+        self.welfare = vcglib.welfare(c_b, c_s, c_auct.allocation, None)
+
+    def print_allocation(self):
+        vcglib.print_allocation(self.c_allocation)
+
+class AuctionBuilder:
     def __init__(self, sellers=None, buyers=None):
         self.sellers = sellers if sellers is not None else []
         self.buyers = buyers if buyers is not None else []
@@ -100,7 +125,7 @@ class Auction:
     def add_seller(self, seller):
         self.sellers.append(seller)
 
-    def allocate(self) -> Auction_Results_C:
+    def run(self) -> AuctionResults:
         bs = Buyers_C()
         bs.count = len(self.buyers)
         for i,b in enumerate(self.buyers):
@@ -121,24 +146,9 @@ class Auction:
                 ss.tasks[i][j].flops = t.flops
                 ss.tasks[i][j].id = t.id_
                 ss.tasks[i][j].assigned = 0
-        print(f"Buyers: {[foo.__dict__ for foo in self.buyers]}")
-        print(f"Sellers: {[foo.__dict__ for foo in self.sellers]}")
-        print(f"")
-        print(f"C Buyers: {bs}")
-        print(f"C Sellers: {ss}")
-        print(f"")
 
-        return vcglib.vcg_auction(bs, ss)
-
-    def print_allocation(self):
-        vcglib.print_allocation(self.allocate().allocation)
-
-            
-        
-        
-
-
-
-
-
-
+        return AuctionResults(
+            bs, ss,
+            vcglib.vcg_auction(bs, ss)
+            )
+    
