@@ -123,8 +123,18 @@ void enumerate(Search *search, size_t cell)
 		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
 		if (search->buyers_used[j] <= search->buyers->demand[j]
 		    && search->sellers_used[i] <= search->sellers->capacity[i]){
-			if (k > 0)
+			if (k > 0){
 				search->sellers->tasks[i][available_task_index].assigned = true;
+				if (search->buyers->tasks_count[j] + 1 >= search->buyers->tasks_cap[j]) {
+					search->buyers->tasks_cap[j] += 4;
+					search->buyers->allocated_tasks[j] = realloc(search->buyers->allocated_tasks[j], sizeof(int) * search->buyers->tasks_cap[j]);
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}else{
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}
+			}
 			enumerate(search, cell + 1);
 			search->sellers->tasks[i][available_task_index].assigned = false;
 		}
@@ -171,6 +181,12 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 		return ar;
 	}
 
+	for (size_t i = 0; i < buyers.count; i++){
+		buyers.tasks_cap[i] = 4;
+		buyers.tasks_count[i] = 0;
+		buyers.allocated_tasks[i] = malloc(sizeof(int) * buyers.tasks_cap[i]);
+	}
+
 	Optimum result = optimize(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
@@ -203,7 +219,9 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	ar.buyer_payments  = prices;
 	ar.seller_payments = costs;
 	ar.allocation = result.allocation;
-	
+	memcpy(ar.tasks_count, buyers.tasks_count, sizeof(ar.tasks_count));
+	memcpy( ar.tasks_cap, buyers.tasks_cap, sizeof(ar.tasks_cap));
+	memcpy( ar.allocated_tasks, buyers.allocated_tasks,sizeof(ar.allocated_tasks));
 	//For debug:
 	//printf("Welfare: %lf\n", welfare(&buyers, &sellers, &ar.allocation, NULL));
 
