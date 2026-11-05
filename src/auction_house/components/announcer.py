@@ -2,7 +2,6 @@
 import asyncio
 import logging
 import threading
-import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 

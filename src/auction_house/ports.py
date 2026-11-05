@@ -6,6 +6,7 @@ swapping one is a configuration change.
 """
 import uuid
 from collections.abc import Mapping, Sequence
+from contextlib import AbstractContextManager
 from typing import Protocol, runtime_checkable
 
 import auction_house.domain
@@ -87,8 +88,8 @@ class Notifier(Protocol):
 class Subscription(Protocol):
     async def get(self) -> auction_house.domain.Announcement:
         """Wait for the next announcement."""
- 
- 
+
+
 @runtime_checkable
 class Announcer(Protocol):
     """Lets bidders listen for announcements instead of polling. Usually implemented

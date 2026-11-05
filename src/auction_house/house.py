@@ -9,7 +9,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
- 
+
 from auction_house import ports
 from auction_house.domain import (
     Assignment,
@@ -173,7 +173,7 @@ class AuctionHouse:
             tasks = {t: self.c.tasks.get(t) for t in auction.task_ids}
             bids = self.c.bids.all(auction_id)
 
-        # Run the auction engine (not under lock). 
+        # Run the auction engine (not under lock).
         # Setting auctio nstatus to CLEARING, such that no others can commence the auction
         try:
             outcome = self.c.engine.clear({t: task.spec.max_budget for t, task in tasks.items()}, bids)
@@ -198,7 +198,6 @@ class AuctionHouse:
                 handles[award.task_id] = handle
                 self._set(award.task_id, status=TaskStatus.EXECUTING, bidder_id=award.bidder_id, handle=handle)
 
-        
         # with lock, handle that nobody won and record outcome to notifier
         with self._lock:
             for task_id in outcome.unallocated:

@@ -1,13 +1,11 @@
 """The HTTP surface, one router per role."""
 import asyncio
 import uuid
-from typing import Annotated
 
 from fastapi import APIRouter, Response, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from auction_house import ports
 from auction_house.api.deps import Announcer, Bidder, House, Operator, Submitter
 from auction_house.domain import (
     Assignment,

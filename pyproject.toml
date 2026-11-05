@@ -52,6 +52,8 @@ disable = [
     "missing-module-docstring",
     "missing-class-docstring",
     "missing-function-docstring",
+    "broad-exception-caught",
+    "import-outside-toplevel",
     "W0105",
 ]
 ignore-paths = ["^tests/"]

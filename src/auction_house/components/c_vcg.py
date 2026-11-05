@@ -2,9 +2,8 @@
 import uuid
 from collections.abc import Mapping, Sequence
 from pathlib import Path
- 
+
 from auction_house import plugins
-from auction_house.components.solvers import welfare_of
 from auction_house.domain import Bid, Selection, SolverError
 
 DEFAULT_LIBRARY = Path(__file__).resolve().parents[2] / "vcg" / "build" / "lib" / "libvcg.so" # TODO: Define actual path instead og this nonsense
@@ -46,7 +45,7 @@ class CVcgSolver:
                 assignment[task_id] = winner.bidder_id
                 welfare += values[task_id] - winner.price
         return Selection(assignment=assignment, welfare=welfare)
- 
+
     def _best_bid(self, value: int, bids: Sequence[Bid]) -> Bid | None:
         """The bid the library picks for one task, or None if no bid is worth taking."""
         vcg = self._vcg
