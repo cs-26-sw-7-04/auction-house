@@ -57,6 +57,7 @@ disable = [
     "W0105",
 ]
 ignore-paths = ["^tests/"]
+ignore-patterns=["test_.*?py"]
 
 [tool.pylint.format]
 max-line-length = 160
