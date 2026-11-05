@@ -40,8 +40,8 @@ TEST basic_vcg_test_1()
 	S.count       = 1;
 	S.capacity[0] = 2;
 	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
-	S.tasks[0][0].id = 0;
-	S.tasks[0][1].id = 1;
+	S.tasks[0][0].id = 1;
+	S.tasks[0][1].id = 2;
 	S.tasks[0][0].flops = 1;
 	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
@@ -59,8 +59,15 @@ TEST basic_vcg_test_1()
 	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
 	    || ar.allocation.quantity[0][1] != 1)
 		result = false;
-	if (ar.allocated_tasks[0][0] != 0 || ar.allocated_tasks[1][0] != 1){
-		printf("ERROR: %d, %d expected 0, 1\n",ar.allocated_tasks[0][0],ar.allocated_tasks[1][0]);
+	if (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2){
+		for (size_t i = 0; i < B.count; i++){
+			printf("-----%zu-----\n", i);
+			for (size_t j = 0; j < ar.tasks_count[i]; j++){
+				printf("%d\n", ar.allocated_tasks[i][j]);
+			}
+			
+		}
+		printf("ERROR: %d, %d expected 1, 2\n",ar.allocated_tasks[0][0],ar.allocated_tasks[1][0]);
 		result = false;
 	}
 
@@ -213,7 +220,63 @@ static double elapsed_seconds(struct timespec start, struct timespec end)
 
 TEST randomized_testing()
 {
-	return true;
+	bool result = true;
+	Buyers B1 = {0};
+	Sellers S1 = {0};
+	auction_results ar1;
+	auction_results ar2;
+	//auction_results ar3;
+
+	srand((unsigned)time(NULL));
+	
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		S1.capacity[i] = 1 + rand() % 9;
+		S1.cost[i]     = 0; //1 + rand() % 9;
+		S1.tasks[i] = malloc(sizeof(Task) * S1.capacity[i]);
+		B1.demand[i] = rand() % 50 + 1;
+		B1.value[i] = malloc(sizeof(double) * B1.demand[i]);
+		B1.value[i][0] = (rand() % 7) + 2;
+		for (int j = 0; j < B1.demand[i]-1; j++){
+			B1.value[i][j+1] = B1.value[i][j]*2;
+		}
+	}
+	int id = 1;
+	for (int k = 1; k < 5; k ++){
+		B1.count = rand() % k + 1;
+		S1.count = rand() % k + 1;
+
+		for (size_t i = 0; i < S1.count; i++){
+			for (int j = 0; j < S1.capacity[i]; j++){
+				S1.tasks[i][j].id = id++;
+				S1.tasks[i][j].flops = rand() % 30 + 1;
+			}
+		}
+
+		ar1 = vcg_auction(B1, S1);
+		ar2 = vcg_auction(B1, S1);
+		if (ar1.buyer_payments == ar2.buyer_payments) continue;
+		
+	for (size_t i = 0; i < B1.count; i++){
+
+		for (size_t j = 0; j < ar1.tasks_count[i]; j++){
+			/* if(ar.allocated_tasks[i][j] != ar2.allocated_tasks[i][j] */
+			/*    || ar2.allocated_tasks[i][j] != ar3.allocated_tasks[i][j]) */
+			if(ar1.allocated_tasks[i][j] != ar2.allocated_tasks[i][j]){
+				printf("mismatched ids %d %d\n", ar1.allocated_tasks[i][j], ar2.allocated_tasks[i][j]);
+				result = false;
+			}
+		}
+		for (size_t j = 0; j < S1.count; j++){
+			if (ar1.allocation.quantity[j][i] != ar2.allocation.quantity[j][i]){
+				printf("error in multithreaded implementation in [%zu][%zu] expected %d got %d\n",
+					j, i, ar1.allocation.quantity[j][i], ar2.allocation.quantity[j][i]);
+				result = false;
+		
+			}
+		}	
+	}
+	}
+	return result;
 }
 
 bool time_test()
