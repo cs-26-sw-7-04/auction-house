@@ -40,12 +40,12 @@ TEST basic_vcg_test_1()
 	S.count       = 1;
 	S.capacity[0] = 2;
 	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
+	S.tasks[0][0].id = 0;
+	S.tasks[0][1].id = 1;
 	S.tasks[0][0].flops = 1;
 	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
-	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
-	S.tasks[1][0].flops = 1;
-	S.tasks[1][1].flops = 1;
+
 
 
 
@@ -59,12 +59,17 @@ TEST basic_vcg_test_1()
 	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
 	    || ar.allocation.quantity[0][1] != 1)
 		result = false;
+	if (ar.allocated_tasks[0][0] != 0 || ar.allocated_tasks[1][0] != 1){
+		printf("ERROR: %d, %d expected 0, 1\n",ar.allocated_tasks[0][0],ar.allocated_tasks[1][0]);
+		result = false;
+	}
 
 	int i = 0;
 	while (B.value[i] != NULL){
 		free(B.value[i]);
 		i++;
 	}
+	free(S.tasks[0]);
 	return result;
 }
 
@@ -91,13 +96,18 @@ TEST welfare_test()
 	S.count       = 1;
 	S.capacity[0] = 2;
 	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
+	S.tasks[0][0].id = 0;
+	S.tasks[0][1].id = 1;
 	S.tasks[0][0].flops = 1;
 	S.tasks[0][1].flops = 1;
 	S.cost[0]     = 1;
+	S.capacity[1] = 2;
 	S.tasks[1]       = malloc(sizeof(Task) * S.capacity[1]);
-	S.capacity[1] = 0;
+	S.tasks[1][0].id = 0;
+	S.tasks[1][1].id = 1;
+	S.tasks[1][0].flops = 1;
+	S.tasks[1][1].flops = 1;
 	S.cost[1]     = 0;
-	S.tasks[0][1].flops = 1;
 	
 
 	auction_results ar = vcg_auction(B,S);
@@ -107,6 +117,10 @@ TEST welfare_test()
 	printf("expected welfare: %lf computed welfare: %lf\n", expected_welfare, computed_welfare);
 	if (computed_welfare < expected_welfare)
 		result = false;
+	if (ar.allocated_tasks[0][0] != 0 || ar.allocated_tasks[2][0] != 1){
+		printf("ERROR: %d, %d expected 0, 1\n",ar.allocated_tasks[0][0],ar.allocated_tasks[2][0]);
+		result = false;
+	}
 	int i = 0;
 	while (B.value[i] != NULL){
 		free(B.value[i]);
@@ -144,6 +158,7 @@ TEST stress_test()
 	}
 	if (ar.allocation.rows != 2 || ar.allocation.cols != 9)
 		result = false;
+
 	int i = 0;
 	while (B.value[i] != NULL){
 		free(B.value[i]);
@@ -194,6 +209,11 @@ static double elapsed_seconds(struct timespec start, struct timespec end)
 {
     return (double)(end.tv_sec - start.tv_sec) +
            (double)(end.tv_nsec - start.tv_nsec) / 1e9;
+}
+
+TEST randomized_testing()
+{
+	return true;
 }
 
 bool time_test()
