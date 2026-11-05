@@ -18,6 +18,9 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 7777
+          envFrom:
+            - configMapRef:
+                name: auction-config
           readinessProbe:
             tcpSocket:
               port: 7777
