@@ -17,14 +17,14 @@ spec:
           image: auction:1.0
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - containerPort: 7777
           readinessProbe:
             tcpSocket:
-              port: 8080
+              port: 7777
             initialDelaySeconds: 3
             periodSeconds: 5
           resources:
-          #This can be changed 100m is 10% of a code.
+            #This can be changed 100m is 10% of a code.
             requests:
               cpu: 100m
               memory: 128Mi
@@ -42,4 +42,4 @@ spec:
     app: auction
   ports:
     - port: 80
-      targetPort: 8080
+      targetPort: 7777

@@ -1,18 +1,33 @@
- ADD source destFROM python:3.12-slim
+FROM python:3.14-slim AS base
 
-#installs uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /project
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+FROM base AS builder
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
 
-# 2. copy all your code
-COPY src/ src/
+RUN uv sync --no-dev --no-install-project
 
-ENV PATH="/project/.venv/bin:$PATH" \
-    PYTHONPATH=/project/src
+COPY README.md ./
+COPY src ./src
 
-EXPOSE 8080
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+RUN uv sync --no-dev
+
+FROM python:3.14-slim AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /app/.venv /app/.venv
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 7777
+
+CMD ["auction-house"]
