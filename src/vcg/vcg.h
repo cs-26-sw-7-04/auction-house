@@ -12,6 +12,9 @@ typedef struct {
 	int demand[MAX_AGENTS]; //Max amount of flops they can take
 	int used_demand[MAX_AGENTS]; //Used during calculation
 	double* value[MAX_AGENTS];
+	size_t tasks_count[MAX_AGENTS];
+	size_t tasks_cap[MAX_AGENTS];
+	int* allocated_tasks[MAX_AGENTS];
 } Buyers;
 
 typedef struct {
@@ -31,6 +34,9 @@ typedef struct {
 	double *buyer_payments;
 	double *seller_payments;
 	Allocation allocation;
+	size_t tasks_count[MAX_AGENTS];
+	size_t tasks_cap[MAX_AGENTS];
+	int* allocated_tasks[MAX_AGENTS];
 } auction_results;
 
 
