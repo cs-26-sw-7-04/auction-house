@@ -148,7 +148,7 @@ class AuctionHouse:
             return bid
 
 
-    def own_bid(self, auction_id: uuid.UUID, bidder_id: str) -> Bid | None:
+    def own_bids(self, auction_id: uuid.UUID, bidder_id: str) -> Bid | None:
         """:3 The bidder's own bids in the auction. Bids are sealed, so there is no way
         to read anyone else's."""
 
