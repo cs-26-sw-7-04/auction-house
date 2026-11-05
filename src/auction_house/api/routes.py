@@ -1,10 +1,14 @@
 """The HTTP surface, one router per role."""
+import asyncio
 import uuid
+from typing import Annotated
 
 from fastapi import APIRouter, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from auction_house.api.deps import Bidder, House, Operator, Submitter
+from auction_house import ports
+from auction_house.api.deps import Announcer, Bidder, House, Operator, Submitter
 from auction_house.domain import (
     Assignment,
     Auction,
@@ -69,6 +73,24 @@ def my_bids(auction_id: uuid.UUID, bidder_id: Bidder, house: House) -> list[Bid]
     """Read back your own bids in this auction. Nobody else's are readable."""
     return house.own_bids(auction_id, bidder_id)
 
+
+@bidders.get("/announcements", responses={200: {"content": {"text/event-stream": {}}}})
+async def announcements(bidder_id: Bidder, announcer: Announcer) -> StreamingResponse:
+    """Server-sent events: an `auction_opened` or `auction_closed` event for each
+    auction, as it happens. The event names the auction; fetch its offers from
+    `GET /auctions/{auction_id}`. Nothing is replayed, so after (re)connecting,
+    list `GET /auctions` to catch up."""
+    async def events():
+        with announcer.subscribe(bidder_id) as subscription:
+            while True:
+                try:
+                    announcement = await asyncio.wait_for(subscription.get(), timeout=15)
+                except TimeoutError:
+                    yield ": keep-alive\n\n"  # stops proxies from closing an idle connection
+                    continue
+                yield f"event: {announcement.event}\ndata: {announcement.model_dump_json()}\n\n"
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 @bidders.get("/assignments")

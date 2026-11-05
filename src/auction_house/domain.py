@@ -5,7 +5,7 @@ Nothing here knows about HTTP, Kubernetes or any particular solver.
 import datetime
 import enum
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
@@ -165,6 +165,15 @@ class Auction(Model):
     status: AuctionStatus = AuctionStatus.OPEN
     outcome: Outcome | None = None
     handles: dict[uuid.UUID, str] = {}
+
+
+class Announcement(Model):
+    """What bidders are told when an auction opens or closes. 
+    Thin: it names the auction, and bidders fetch the offers with its id. Never carry bids, outcomes or budgets."""
+    event: Literal["auction_opened", "auction_closed"]
+    auction_id: uuid.UUID
+    status: AuctionStatus
+    closes_at: UtcDatetime
 
 
 class Assignment(Model):

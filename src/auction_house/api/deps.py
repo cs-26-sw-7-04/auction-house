@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Request, Security, status
 from fastapi.security import APIKeyHeader
 
+from auction_house import ports
 from auction_house.config import Principal, Role, Settings
 from auction_house.house import AuctionHouse
 
@@ -25,6 +26,17 @@ def get_settings(request: Request) -> Settings:
 
 
 House = Annotated[AuctionHouse, Depends(get_house)]
+
+
+def get_announcer(house: House) -> ports.Announcer:
+    """The configured notifier, if it lets bidders subscribe."""
+    notifier = house.c.notifier
+    if not isinstance(notifier, ports.Announcer):
+        raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, "announcements are not enabled")
+    return notifier
+
+
+Announcer = Annotated[ports.Announcer, Depends(get_announcer)]
 
 
 def _principal(key: str | None, settings: Settings) -> Principal | None:
