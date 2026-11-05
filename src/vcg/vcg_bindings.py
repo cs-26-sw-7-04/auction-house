@@ -22,7 +22,7 @@ class Buyers_C(ctypes.Structure):
                 ("value",(ctypes.POINTER(ctypes.c_double) * MAX_AGENTS)),
                 ("tasks_count",ctypes.c_size_t*MAX_AGENTS),
                 ("tasks_cap",ctypes.c_size_t*MAX_AGENTS),
-                ("allocated_tasks",POINTER(ctypes.c_int)*MAX_AGENTS)]
+                ("allocated_tasks",ctypes.POINTER(ctypes.c_int)*MAX_AGENTS)]
     def __repr__(self):
         return f"Buyers_C(count: {self.count}, demand: {self.demand}, used_demand: {self.used_demand}, value: {self.value})"
 
