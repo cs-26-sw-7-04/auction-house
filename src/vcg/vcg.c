@@ -160,7 +160,11 @@ double pivot_transfer(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agen
 }
 
 auction_results vcg_auction(Buyers buyers, Sellers sellers)
-{
+{	
+	//For debug:
+	//print_sellers(sellers);
+	//print_buyers(buyers);
+	
 	auction_results ar = {0};
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
@@ -199,6 +203,9 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	ar.buyer_payments  = prices;
 	ar.seller_payments = costs;
 	ar.allocation = result.allocation;
+	
+	//For debug:
+	//printf("Welfare: %lf\n", welfare(&buyers, &sellers, &ar.allocation, NULL));
 
 	return ar;
 }
