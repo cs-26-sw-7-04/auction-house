@@ -62,8 +62,8 @@ vcglib.print_allocation(allo.allocation)
 
 
 auction = Auction(
-        [Seller([Task(0, 1), Task(1, 1)])],
-        [Buyer(1, [5, 10]), Buyer(1, [2, 4]), Buyer(1, [-4000, 6])]
+        [Seller([Task(0, 1), Task(1, 1)], 1)],
+        [Buyer(1, [5, 10]), Buyer(1, [2, 4]), Buyer(2, [-4000, 6])]
         )
 
 auction.print_allocation()

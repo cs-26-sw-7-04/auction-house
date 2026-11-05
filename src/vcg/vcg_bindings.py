@@ -120,6 +120,7 @@ class Auction:
             for j,t in enumerate(s.tasks):
                 ss.tasks[i][j].flops = t.flops
                 ss.tasks[i][j].id = t.id_
+                ss.tasks[i][j].assigned = 0
         print(f"Buyers: {[foo.__dict__ for foo in self.buyers]}")
         print(f"Sellers: {[foo.__dict__ for foo in self.sellers]}")
         print(f"")
