@@ -1,4 +1,5 @@
 from vcg_bindings import *
+from dataclasses import dataclass
 import ctypes
 
 libc = ctypes.CDLL(None)
@@ -9,8 +10,8 @@ libc.free.argtypes = [ctypes.c_void_p]
 # Basic VCG Test 1:
 print("=== Basic VCG Test 1 ===")
 auction = AuctionBuilder(
-        [Seller([Task(0, 1), Task(1, 1)], 1)],
-        [Buyer(1, [5, 10]), Buyer(1, [2, 4]), Buyer(2, [-4000, 6])]
+        [Seller(0, [Task(0, 1), Task(1, 1)], 1)],
+        [Buyer(0, 1, [5, 10]), Buyer(1, 1, [2, 4]), Buyer(2, 2, [-4000, 6])]
         )
 
 print("Should be: 1 1 0")
@@ -22,10 +23,10 @@ print("")
 # Welfare test:
 print("=== Welfare test ===")
 auction = AuctionBuilder()
-auction.add_buyer(Buyer(1, [5]))
-auction.add_buyer(Buyer(1, [2]))
-auction.add_buyer(Buyer(2, [3,6]))
-auction.add_seller(Seller([Task(0, 1), Task(1, 1)], 1))
+auction.add_buyer(Buyer(0, 1, [5]))
+auction.add_buyer(Buyer(1, 1, [2]))
+auction.add_buyer(Buyer(2, 2, [3,6]))
+auction.add_seller(Seller(0, [Task(0, 1), Task(1, 1)], 1))
 
 results = auction.run()
 results.print_allocation()
