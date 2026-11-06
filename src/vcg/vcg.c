@@ -14,8 +14,9 @@ typedef struct {
 	Allocation allocation;
 	double welfare;
 	bool found;
-	Agent buyer;
-	Agent seller;
+	size_t tasks_count[MAX_AGENTS];
+	size_t tasks_cap[MAX_AGENTS];
+	int* allocated_tasks[MAX_AGENTS];
 } Optimum;
 
 
@@ -57,6 +58,24 @@ typedef struct {
 	Optimum best;
 } Search;
 
+void clone_buyer_attr(Optimum *best, Buyers *buyers)
+{
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		size_t tmp = best->tasks_cap[i];
+		best->tasks_count[i] = buyers->tasks_count[i];
+		best->tasks_cap[i] = buyers->tasks_cap[i];
+		for (size_t j = 0; j < best->tasks_cap[i]; j++){
+			if (best->allocated_tasks[i] == NULL){
+				best->allocated_tasks[i] = malloc(sizeof(int*) * best->tasks_cap[i]);
+			} else if (best->tasks_cap[i] > tmp){
+				best->allocated_tasks[i] = realloc(best->allocated_tasks[i], sizeof(int*) * best->tasks_cap[i]);
+			}
+			if (buyers->allocated_tasks[i] != NULL)
+				best->allocated_tasks[i][j] = buyers->allocated_tasks[i][j];
+		}
+	}
+}
+
 void enumerate(Search *search, size_t cell)
 {
 	
@@ -73,6 +92,7 @@ void enumerate(Search *search, size_t cell)
 			search->best.found = true;
 			search->best.welfare = w;
 			search->best.allocation = search->x;
+			clone_buyer_attr(&search->best, search->buyers);
 		}
 		return;
 	}
@@ -123,10 +143,25 @@ void enumerate(Search *search, size_t cell)
 		search->buyers_used[j] += search->sellers->tasks[i][available_task_index].flops;
 		if (search->buyers_used[j] <= search->buyers->demand[j]
 		    && search->sellers_used[i] <= search->sellers->capacity[i]){
-			if (k > 0)
+			if (k > 0){
 				search->sellers->tasks[i][available_task_index].assigned = true;
+				if (search->buyers->allocated_tasks[j] == NULL || search->buyers->tasks_count[j] + 1 >= search->buyers->tasks_cap[j]) {
+					search->buyers->tasks_cap[j] += 4;
+					search->buyers->allocated_tasks[j] = realloc(search->buyers->allocated_tasks[j], sizeof(int) * search->buyers->tasks_cap[j]);
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}else{
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}
+			}
 			enumerate(search, cell + 1);
 			search->sellers->tasks[i][available_task_index].assigned = false;
+
+			if (k > 0){
+				search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = 0;
+				search->buyers->tasks_count[j]--;
+			}
 		}
 
 		search->sellers_used[i] -= k;
@@ -140,6 +175,9 @@ Optimum optimize (Buyers* buyers, Sellers *sellers, Agent *excluded)
 {
 	Search search = {0};
 	search.buyers = buyers;
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		search.buyers->allocated_tasks[i] = NULL;
+	}
 	search.sellers = sellers;
 	search.excluded = excluded;
 	search.x.rows = sellers->count;
@@ -169,6 +207,12 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
 		return ar;
+	}
+
+	for (size_t i = 0; i < buyers.count; i++){
+		buyers.tasks_cap[i] = 0;
+		buyers.tasks_count[i] = 0;
+		buyers.allocated_tasks[i] = malloc(sizeof(int) * buyers.tasks_cap[i]);
 	}
 
 	Optimum result = optimize(&buyers, &sellers, NULL);
@@ -203,7 +247,9 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	ar.buyer_payments  = prices;
 	ar.seller_payments = costs;
 	ar.allocation = result.allocation;
-	
+	memcpy(ar.tasks_count, result.tasks_count, sizeof(ar.tasks_count));
+	memcpy( ar.tasks_cap, result.tasks_cap, sizeof(ar.tasks_cap));
+	memcpy( ar.allocated_tasks, result.allocated_tasks,sizeof(ar.allocated_tasks));
 	//For debug:
 	//printf("Welfare: %lf\n", welfare(&buyers, &sellers, &ar.allocation, NULL));
 
@@ -280,7 +326,7 @@ void enumerate_multithreaded(Search *search, size_t cell)
 		
 	for (int p = 0; p < PROCS; p++)
 	{
-		memcpy(&searches[p], search, sizeof(Search));
+		memcpy(&searches[p], search, sizeof(Search)); /* TODO: this is currently broken and makes the multithreaded vcg have a chance of giving the incorrect answer or segfault */
 		pthread_create(&threads[p], NULL, multithreaded_branch, (void*) &r[p]);
 
 	}
@@ -342,14 +388,32 @@ void* multithreaded_branch(void* arg)
 			&& search->sellers_used[i] <= search->sellers->capacity[i];
 		
 		if (should_enumerate){
-			if (k > 0)
+			if (k > 0){
 				search->sellers->tasks[i][available_task_index].assigned = true;
+				if (search->buyers->allocated_tasks[j] == NULL || search->buyers->tasks_count[j] + 1 >= search->buyers->tasks_cap[j]) {
+					search->buyers->tasks_cap[j] += 4;
+					search->buyers->allocated_tasks[j] = realloc(search->buyers->allocated_tasks[j], sizeof(int) * search->buyers->tasks_cap[j]);
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}else{
+					search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = search->sellers->tasks[i][available_task_index].id;
+					search->buyers->tasks_count[j]++;
+				}
+			}
 			enumerate(search, cell + 1);
 			search->sellers->tasks[i][available_task_index].assigned = false;
+
+			if (k > 0){
+				search->buyers->allocated_tasks[j][search->buyers->tasks_count[j]] = 0;
+				search->buyers->tasks_count[j]--;
+			}
 		}
 
 		search->sellers_used[i] -= k;
-		search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
+		if (k > 0){
+			search->buyers_used[j] -= search->sellers->tasks[i][available_task_index].flops;
+			search->buyers->tasks_count[j]--;
+		}
 	}
 	search->x.quantity[i][j] = 0;
 	return (void *) 1;
@@ -358,6 +422,9 @@ Optimum optimize_multithreaded (Buyers* buyers, Sellers *sellers, Agent *exclude
 {
 	Search search = {0};
 	search.buyers = buyers;
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		search.buyers->allocated_tasks[i] = NULL;
+	}
 	search.sellers = sellers;
 	search.excluded = excluded;
 	search.x.rows = sellers->count;
@@ -386,6 +453,12 @@ auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 	if (buyers.count > MAX_AGENTS || sellers.count > MAX_AGENTS) {
 		fprintf(stderr, "Too many agents; increase MAX_AGENTS.\n");
 		return ar;
+	}
+
+	for (size_t i = 0; i < buyers.count; i++){
+		buyers.tasks_cap[i] = 4;
+		buyers.tasks_count[i] = 0;
+		buyers.allocated_tasks[i] = malloc(sizeof(int) * buyers.tasks_cap[i]);
 	}
 
 	Optimum result = optimize_multithreaded(&buyers, &sellers, NULL);
@@ -419,7 +492,9 @@ auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 	ar.buyer_payments = prices;
 	ar.seller_payments = costs;
 	ar.allocation = result.allocation;
-
+	memcpy(ar.tasks_count, buyers.tasks_count, sizeof(ar.tasks_count));
+	memcpy( ar.tasks_cap, buyers.tasks_cap, sizeof(ar.tasks_cap));
+	memcpy( ar.allocated_tasks, buyers.allocated_tasks,sizeof(ar.allocated_tasks));
 	return ar;
 }
 
