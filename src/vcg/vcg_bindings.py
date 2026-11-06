@@ -1,5 +1,6 @@
 import ctypes
 import pathlib
+from dataclasses import dataclass
 
 def parent(path):
     return pathlib.Path(path).parent.resolve()
@@ -71,7 +72,7 @@ libc.free.argtypes = [ctypes.c_void_p]
 
 
 class Task:
-    def __init__(self, id_, flops):
+    def __init__(self, id_: int, flops):
         self.id_ = id_
         self.flops = flops
 
@@ -80,15 +81,17 @@ class Task:
 
 class Buyer:
     # values is a map from flops -> payment
-    def __init__(self, max_flops, values):
+    def __init__(self, id_: int, max_flops, values):
         self.max_flops = max_flops
         self.values = values
+        self.id_ = id_
 
     def __repr__(self):
-        return f"Buyer({self.max_flops}, {self.values})"
+        return f"Buyer({self.id_}, {self.max_flops}, {self.values})"
 
 class Seller:
-    def __init__(self, tasks=None, cost=0):
+    def __init__(self, id_: int, tasks=None, cost=0):
+        self.id_ = id_
         self.tasks = tasks if tasks is not None else []
         self.cost = cost
     
@@ -96,20 +99,36 @@ class Seller:
         self.tasks.append(task)
 
     def __repr__(self):
-        return f"Seller({self.tasks}, {self.cost})"
+        return f"Seller({self.id_}, {self.tasks}, {self.cost})"
 
 
 class AuctionResults:
     c_allocation: Allocation_C
     welfare: float
-    mappings: Dict[int, int]
+    @dataclass
+    class BuyerResult:
+        payment: float
+        tasks: List[int]
+    buyer_results: Dict[int, BuyerResult] #BuyerID -> TaskID
+    seller_payments: Dict[int, double] #Sellerid->money
 
-    def __init__(self, c_b: Buyers_C, c_s: Sellers_C, c_auct: Auction_Results_C):
+    def __init__(self, ab: AuctionBuilder, c_auct: Auction_Results_C):
+        self.buyer_results = dict()
+        self.seller_payments = dict()
+        for b_i,buyer in enumerate(ab.buyers):
+            self.buyer_results[buyer.id_] = self.BuyerResult(c_auct.buyer_payments[b_i], [])
+            for t_i in range(c_auct.tasks_count[b_i]):
+                self.buyer_results[buyer.id_].tasks.append(c_auct.allocated_tasks[b_i][t_i])
+        for s_i,seller in enumerate(ab.sellers):
+            self.seller_payments[seller.id_] = c_auct.seller_payments[s_i]
+
         self.c_allocation = c_auct.allocation
-        self.welfare = vcglib.welfare(c_b, c_s, c_auct.allocation, None)
+        self.welfare = vcglib.welfare(ab.c_buyers, ab.c_sellers, c_auct.allocation, None)
 
     def print_allocation(self):
         vcglib.print_allocation(self.c_allocation)
+        print(f"Seller payments: {self.seller_payments}")
+        print(f"Buyer results: {self.buyer_results}")
 
 class AuctionBuilder:
     def __init__(self, sellers=None, buyers=None):
@@ -146,9 +165,11 @@ class AuctionBuilder:
                 ss.tasks[i][j].flops = t.flops
                 ss.tasks[i][j].id = t.id_
                 ss.tasks[i][j].assigned = 0
-
+        
+        self.c_buyers = bs
+        self.c_sellers = ss
         return AuctionResults(
-            bs, ss,
+            self,
             vcglib.vcg_auction(bs, ss)
             )
     
