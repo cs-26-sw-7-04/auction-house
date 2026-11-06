@@ -1,4 +1,5 @@
-Run main:
-```bash
-uv run app
+# Auctionhouse using VCG
+
+```
+cp .env.example .env
 ```
