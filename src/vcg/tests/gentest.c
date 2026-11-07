@@ -99,7 +99,8 @@ bool generate_tests(char* input_file, char* test_dir)
 	
 	while (cur.offset <= bytes_read) 
 	{
-		next_char = test_input_buffer[cur.offset];
+		if (cur.offset != TEST_INPUT_BUFFER_SIZE)
+			next_char = test_input_buffer[cur.offset];
 		if (next_char == '\n' && !might_be_function)
 		{
 			cur.col = 0;
@@ -187,6 +188,8 @@ bool generate_tests(char* input_file, char* test_dir)
 		cur.offset++;
 		
 	}
+	free(str.items);
+	free(file_loc.items);
 
 	fclose(in);
 	return true;

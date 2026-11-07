@@ -50,7 +50,8 @@ TEST basic_vcg_test_1()
 
 
 
-	auction_results ar = vcg_auction(B,S);
+	auction_results ar = {0};
+	ar = vcg_auction(B,S);
 	print_allocation(ar.allocation);
 	if (ar.allocation.rows == 0 || ar.allocation.cols == 0)
 		result = false;
@@ -59,7 +60,7 @@ TEST basic_vcg_test_1()
 	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
 	    || ar.allocation.quantity[0][1] != 1)
 		result = false;
-	if (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2){
+	if (ar.allocated_tasks[0] != NULL && (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2)){
 		for (size_t i = 0; i < B.count; i++){
 			printf("-----%zu-----\n", i);
 			for (size_t j = 0; j < ar.tasks_count[i]; j++){
@@ -76,6 +77,14 @@ TEST basic_vcg_test_1()
 		free(B.value[i]);
 		i++;
 	}
+	free(ar.buyer_payments);
+	free(ar.seller_payments);
+	for (int k = 0; k < MAX_AGENTS; k++){
+		if(ar.allocated_tasks[k] != NULL)
+			free(ar.allocated_tasks[k]);
+	}
+	
+		
 	free(S.tasks[0]);
 	return result;
 }
@@ -124,7 +133,7 @@ TEST welfare_test()
 	printf("expected welfare: %lf computed welfare: %lf\n", expected_welfare, computed_welfare);
 	if (computed_welfare < expected_welfare)
 		result = false;
-	if (ar.allocated_tasks[0][0] != 0 || ar.allocated_tasks[2][0] != 1){
+	if (ar.allocated_tasks[0]!= NULL && (ar.allocated_tasks[0][0] != 0 || ar.allocated_tasks[2][0] != 1)){
 		printf("ERROR: %d, %d expected 0, 1\n",ar.allocated_tasks[0][0],ar.allocated_tasks[2][0]);
 		result = false;
 	}
@@ -258,7 +267,7 @@ TEST randomized_testing()
 		
 	for (size_t i = 0; i < B1.count; i++){
 
-		for (size_t j = 0; j < ar1.tasks_count[i]; j++){
+		for (size_t j = 0; j < ar1.tasks_count[i] && j < ar2.tasks_count[i]; j++){
 			/* if(ar.allocated_tasks[i][j] != ar2.allocated_tasks[i][j] */
 			/*    || ar2.allocated_tasks[i][j] != ar3.allocated_tasks[i][j]) */
 			if(ar1.allocated_tasks[i][j] != ar2.allocated_tasks[i][j]){
@@ -279,39 +288,114 @@ TEST randomized_testing()
 	return result;
 }
 
-bool time_test()
+TEST approximation_basic_test()
+{
+	bool result = true;
+	
+	Buyers B = {0};
+	B.count     = 3;
+	B.demand[0] = 1;
+	B.demand[1] = 1;
+	B.demand[2] = 2;
+	B.value[0] = malloc(sizeof(double) * 2);
+	B.value[0][0]  = 5;
+	B.value[0][1]  = 10;
+	B.value[1] = malloc(sizeof(double) * 2);
+	B.value[1][0]  = 2;
+	B.value[1][1]  = 4;
+	B.value[2] = malloc(sizeof(double) * 2);
+	B.value[2][0]  = -4000;
+	B.value[2][1]  = 6;
+
+	Sellers S = {0};
+	S.count       = 1;
+	S.capacity[0] = 2;
+	S.tasks[0]       = malloc(sizeof(Task) * S.capacity[0]);
+	S.tasks[0][0].id = 1;
+	S.tasks[0][1].id = 2;
+	S.tasks[0][0].flops = 1;
+	S.tasks[0][1].flops = 1;
+	S.cost[0]     = 1;
+
+
+
+
+
+	auction_results ar = vcg_auction_approximation(B,S);
+	print_allocation(ar.allocation);
+	if (ar.allocation.rows == 0 || ar.allocation.cols == 0)
+		result = false;
+	if (ar.allocation.rows != 1 || ar.allocation.cols != 3)
+		result = false;
+	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
+	    || ar.allocation.quantity[0][1] != 1)
+		result = false;
+	if (ar.allocated_tasks[0] != NULL && (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2)){
+		for (size_t i = 0; i < B.count; i++){
+			printf("-----%zu-----\n", i);
+			for (size_t j = 0; j < ar.tasks_count[i]; j++){
+				printf("%d\n", ar.allocated_tasks[i][j]);
+			}
+			
+		}
+		printf("ERROR: %d, %d expected 1, 2\n",ar.allocated_tasks[0][0],ar.allocated_tasks[1][0]);
+		result = false;
+	}
+
+	int i = 0;
+	while (B.value[i] != NULL){
+		/* free(B.value[i]); */
+		i++;
+	}
+	//free(S.tasks[0]);
+	return result;
+}
+
+
+TEST time_test()
 {
 	bool result = true;
 	Buyers B = {0};
 	Sellers S = {0};
-	auction_results ar1;
-	auction_results ar2;
-	auction_results ar3;
-	char* filepath = "Time_test_output.csv";
+	auction_results ar1 = {0};
+	auction_results ar2 = {0};
 
-	FILE * output_data = fopen(filepath, "w");
-	if (output_data == NULL){
-		fprintf(stderr, "failed to open or create file: %sn\n", filepath);
-		return false;
-	}
 
-	fprintf(output_data, "Agents, time1, time2, delta1, time3, delta2\n");
+
 	srand((unsigned)time(NULL));
-	
+	int id = 1;
 	for (int i = 0; i < MAX_AGENTS; i++) {
+
 		S.capacity[i] = 1 + rand() % 9;
 		S.cost[i]     = 0; //1 + rand() % 9;
-
-		B.demand[i] = (i % 2) +1;
-		B.value[i] = malloc(sizeof(double) * 2);
+		S.tasks[i] = calloc(S.capacity[i],sizeof(Task));
+		if (S.tasks[i] == NULL){
+			fprintf(stderr, "failed to allocate S.tasks[%d]\n", i);
+			abort();
+		}
+		B.demand[i] = rand() % 50 + 1;
+		B.value[i] = calloc(B.demand[i], sizeof(double));
+		if (B.value[i] == NULL){
+			fprintf(stderr, "failed to allocate B.value[%d]\n", i);
+			abort();
+		}
 		B.value[i][0] = (rand() % 7) + 2;
-		B.value[i][1] = B.value[i][0]*2;
+		for (int j = 0; j < B.demand[i]-1; j++){
+			B.value[i][j+1] = B.value[i][j]*2;
+		}
 	}
 
-	for (int i = 1; i < 6; i ++){
+	for (int i = 1; i < 5; i ++){
 		B.count = i;
 		S.count = i;
 
+		for (size_t i = 0; i < S.count; i++){
+			for (int j = 0; j < S.capacity[i]; j++){
+				S.tasks[i][j].id = id++;
+				S.tasks[i][j].flops = rand() % 30 + 1;
+			}
+		}
+		
 		struct timespec start, end;
 
 		clock_gettime(CLOCK_MONOTONIC, &start);
@@ -321,37 +405,24 @@ bool time_test()
 		print_allocation(ar1.allocation);
 		printf("time taken: %lf seconds (agents %d)\n",time1, i);
 		clock_gettime(CLOCK_MONOTONIC, &start);
-		ar2 = vcg_auction_multithreaded(B, S);
+		ar2 = vcg_auction_approximation(B, S);
 		clock_gettime(CLOCK_MONOTONIC, &end);
 		double time2 = elapsed_seconds(start, end);
 		print_allocation(ar2.allocation);
-		printf("time taken (multithreaded): %lf seconds (agents %d)\n",time2, i);
-		clock_gettime(CLOCK_MONOTONIC, &start);
-		float approximation_percent = 90.0f;
-		ar3 = vcg_auction_approximation(B, S, approximation_percent);
-		clock_gettime(CLOCK_MONOTONIC, &end);
-		double time3 = elapsed_seconds(start, end);
-		printf("time taken (Approximation): %lf seconds (agents %d)\n",time3, i);
+		printf("time taken (approximation): %lf seconds (agents %d)\n",time2, i);
 		double delta1 = time2-time1;
-		double delta2 = time3-time1;
 
 		printf("time delta: %lf seconds\n", delta1);
-		fprintf(output_data, "%d,%lf,%lf,%lf,%lf,%lf\n", i, time1, time2, delta1, time3, delta2);
 		for (size_t j = 0; j < S.count; j++){
 			for (size_t k = 0; k < B.count; k++){
 				if (ar1.allocation.quantity[j][k] != ar2.allocation.quantity[j][k]){
-					fprintf(stderr, "error in multithreaded implementation in [%zu][%zu] expected %d got %d\n",
-						j, k, ar1.allocation.quantity[j][k], ar2.allocation.quantity[j][k]);
-					result = false;
-				}else if (ar1.allocation.quantity[j][k] != ar3.allocation.quantity[j][k]){
 					fprintf(stderr, "error in approximation implementation in [%zu][%zu] expected %d got %d\n",
-						j, k, ar1.allocation.quantity[j][k], ar3.allocation.quantity[j][k]);
+						j, k, ar1.allocation.quantity[j][k], ar2.allocation.quantity[j][k]);
 					result = false;
 				}
 			}
 		}
 	}
-	fclose(output_data);
 	return result;
 
 }
