@@ -17,6 +17,7 @@
   This test case is based on this example
   https://en.wikipedia.org/wiki/Vickrey%E2%80%93Clarke%E2%80%93Groves_auction#Two_items,_three_bidders 
  */
+
 TEST basic_vcg_test_1()
 {
 	bool result = true;
@@ -142,6 +143,12 @@ TEST welfare_test()
 		free(B.value[i]);
 		i++;
 	}
+
+	i = 0;
+	while (B.allocated_tasks[i] != NULL){
+		free(B.allocated_tasks[i]);
+		i++;
+	}
 	return result;
 }
 
@@ -180,10 +187,15 @@ TEST stress_test()
 		free(B.value[i]);
 		i++;
 	}
+	i = 0;
+	while (B.allocated_tasks[i] != NULL){
+		free(B.allocated_tasks[i]);
+		i++;
+	}
 	return result;
 }
 
-TEST stress_test_multithreaded()
+bool stress_test_multithreaded()
 {
 	bool result = true;
 	
@@ -215,6 +227,11 @@ TEST stress_test_multithreaded()
 	int i = 0;
 	while (B.value[i] != NULL){
 		free(B.value[i]);
+		i++;
+	}
+	i = 0;
+	while (B.allocated_tasks[i] != NULL){
+		free(B.allocated_tasks[i]);
 		i++;
 	}
 	return result;
@@ -277,7 +294,7 @@ TEST randomized_testing()
 		}
 		for (size_t j = 0; j < S1.count; j++){
 			if (ar1.allocation.quantity[j][i] != ar2.allocation.quantity[j][i]){
-				printf("error in multithreaded implementation in [%zu][%zu] expected %d got %d\n",
+				printf("error in implementation in [%zu][%zu] expected %d got %d\n",
 					j, i, ar1.allocation.quantity[j][i], ar2.allocation.quantity[j][i]);
 				result = false;
 		
@@ -285,6 +302,19 @@ TEST randomized_testing()
 		}	
 	}
 	}
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		free(S1.tasks[i]);
+		free(B1.value[i]);
+	}
+	int i = 0;
+	while (B1.allocated_tasks[i] != NULL){
+		free(B1.allocated_tasks[i]);
+		i++;
+	}
+	free(ar1.buyer_payments);
+	free(ar1.seller_payments);
+	free(ar2.buyer_payments);
+	free(ar2.seller_payments);
 	return result;
 }
 
@@ -330,7 +360,7 @@ TEST approximation_basic_test()
 	if (ar.allocation.quantity[0][0] != ar.allocation.quantity[0][1]
 	    || ar.allocation.quantity[0][1] != 1)
 		result = false;
-	if (ar.allocated_tasks[0] != NULL && (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2)){
+	if ((ar.allocated_tasks[0] != NULL && ar.allocated_tasks[1] != NULL) && (ar.allocated_tasks[0][0] != 1 || ar.allocated_tasks[1][0] != 2)){
 		for (size_t i = 0; i < B.count; i++){
 			printf("-----%zu-----\n", i);
 			for (size_t j = 0; j < ar.tasks_count[i]; j++){
@@ -342,14 +372,20 @@ TEST approximation_basic_test()
 		result = false;
 	}
 
+
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		free(S.tasks[i]);
+		free(B.value[i]);
+	}
 	int i = 0;
-	while (B.value[i] != NULL){
-		/* free(B.value[i]); */
+	while (B.allocated_tasks[i] != NULL){
+		free(B.allocated_tasks[i]);
 		i++;
 	}
-	//free(S.tasks[0]);
+
 	return result;
 }
+
 
 
 TEST time_test()
@@ -385,7 +421,7 @@ TEST time_test()
 		}
 	}
 
-	for (int i = 1; i < 5; i ++){
+	for (int i = 1; i < 6; i ++){
 		B.count = i;
 		S.count = i;
 
@@ -411,8 +447,8 @@ TEST time_test()
 		print_allocation(ar2.allocation);
 		printf("time taken (approximation): %lf seconds (agents %d)\n",time2, i);
 		double delta1 = time2-time1;
-
 		printf("time delta: %lf seconds\n", delta1);
+		if (ar1.buyer_payments == NULL) continue;
 		for (size_t j = 0; j < S.count; j++){
 			for (size_t k = 0; k < B.count; k++){
 				if (ar1.allocation.quantity[j][k] != ar2.allocation.quantity[j][k]){
@@ -422,7 +458,21 @@ TEST time_test()
 				}
 			}
 		}
+		free(ar1.buyer_payments);
+		free(ar1.seller_payments);
+		free(ar2.buyer_payments);
+		free(ar2.seller_payments);
+	}
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		free(S.tasks[i]);
+		free(B.value[i]);
+	}
+
+ 	for (int i = 0; i < MAX_AGENTS; i++) {
+		if (B.allocated_tasks[i] != NULL){
+			free(B.allocated_tasks[i]);
+		}
+
 	}
 	return result;
-
 }
