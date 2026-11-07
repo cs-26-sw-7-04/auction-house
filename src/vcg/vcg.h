@@ -42,7 +42,7 @@ typedef struct {
 
 auction_results vcg_auction(Buyers buyers, Sellers sellers);
 auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers);
-auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha);
+auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers);
 void print_allocation(Allocation x);
 
 

@@ -23,15 +23,12 @@ typedef struct {
 double welfare(Buyers* buyers, Sellers* sellers, Allocation *x, Agent *excluded)
 {
 	double total = 0.0;
-
 	for (size_t i = 0; i < sellers->count; i++){
 		for (size_t j = 0; j < buyers->count; j++){
 			int q = x->quantity[i][j];
 
-			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;
-
-			
-			if (!exclude_buyer && buyers->value[j] != NULL) total  += buyers->value[j][q-1];
+			bool exclude_buyer  = excluded != NULL && excluded->type == AGENT_BUYER  && excluded->index == j;			
+			if (!exclude_buyer && buyers->value[j] != NULL) total  += q > 0 ? buyers->value[j][q-1] : 0;
 
 		}
 	}
@@ -209,12 +206,6 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 		return ar;
 	}
 
-	for (size_t i = 0; i < buyers.count; i++){
-		buyers.tasks_cap[i] = 0;
-		buyers.tasks_count[i] = 0;
-		buyers.allocated_tasks[i] = malloc(sizeof(int) * buyers.tasks_cap[i]);
-	}
-
 	Optimum result = optimize(&buyers, &sellers, NULL);
 	if (!result.found) {
 		fprintf(stderr, "No feasible allocation found.\n");
@@ -252,6 +243,7 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	memcpy( ar.allocated_tasks, result.allocated_tasks,sizeof(ar.allocated_tasks));
 	//For debug:
 	//printf("Welfare: %lf\n", welfare(&buyers, &sellers, &ar.allocation, NULL));
+
 
 	return ar;
 }
@@ -498,11 +490,172 @@ auction_results vcg_auction_multithreaded(Buyers buyers, Sellers sellers)
 	return ar;
 }
 
-auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers, float alpha)
+
+
+/* --------------------Approximation Implementation-------------------- */
+
+
+typedef struct{
+	bool join_successful;
+	Allocation A;
+	double welfare;
+	struct combined_buyer{
+		int demand;
+		int used_demand;
+		double* value;
+		size_t tasks_count;
+		size_t tasks_cap;
+		int* allocated_tasks;
+	} combined_buyer;
+	Optimum O;
+} join_result;
+
+
+join_result* join(Buyers *B, size_t index, Sellers *S, join_result *jr, Agent *excluded)
 {
-	(void) buyers;
-	(void) sellers;
-	(void) alpha;
+	if (index > B->count) {
+		fprintf(stderr, "./%s:%d:%d: index out of bounds in join() \n", __FILE__, __LINE__, 0);
+		return jr;
+	}
+	if (jr == NULL){
+		jr = calloc(1, sizeof(*jr));
+		if (jr == NULL){
+			fprintf(stderr, "./%s:%d:%d: failed to allocate join_result \n", __FILE__, __LINE__, 0);
+			return jr;
+		}
+	}
+	
+
+	Buyers B2 = {0};
+	B2 = *B;
+	if (index == 0){
+		for (size_t i = 1; i < MAX_AGENTS; i++){
+			B2.demand[i] = 0;
+			
+		}
+	}else{
+		for (size_t i = 1; i < MAX_AGENTS; i++){
+			if (i == index) continue;
+			B2.demand[i] = 0;
+		}
+		if (jr->combined_buyer.demand > B->demand[0]){
+			B->value[0] = realloc(B->value[0], sizeof(B->value[0]) * jr->combined_buyer.demand);
+		}
+		if (jr->combined_buyer.tasks_cap > B->tasks_cap[0]){
+			B->allocated_tasks[0] = realloc(B->allocated_tasks[0], sizeof(B->allocated_tasks[0]) * jr->combined_buyer.tasks_cap);
+		}
+
+
+		B->demand[0] = jr->combined_buyer.demand;
+		B->used_demand[0] = jr->combined_buyer.used_demand;
+
+		for (int i = 0; i < jr->combined_buyer.demand; i++){
+			B->value[0][i] = jr->combined_buyer.value[i];
+		}
+
+		B->tasks_count[0] = jr->combined_buyer.tasks_count;
+		B->tasks_cap[0] = jr->combined_buyer.tasks_cap;
+		
+		for (size_t i = 0; i < jr->combined_buyer.tasks_count; i++){
+			B->allocated_tasks[index][i] = jr->combined_buyer.allocated_tasks[i];
+		}
+
+
+	}
+	Optimum O = optimize(&B2, S, excluded);
+
+	int prev_demand = jr->combined_buyer.demand;
+
+	if (jr->combined_buyer.tasks_cap < B->tasks_cap[index]){
+		jr->combined_buyer.allocated_tasks = realloc(jr->combined_buyer.allocated_tasks, sizeof(jr->combined_buyer.allocated_tasks) * B->tasks_cap[index]);
+	}
+
+	jr->combined_buyer.demand += B->demand[index];
+	jr->combined_buyer.used_demand += B->used_demand[index];
+	if (B->demand[index] > 0){
+		jr->combined_buyer.value = realloc(jr->combined_buyer.value, sizeof(jr->combined_buyer.value) * jr->combined_buyer.demand);
+	}
+	double prev = 0;
+	for (int i = prev_demand; i < jr->combined_buyer.demand; i++){
+		if (i - prev_demand < B->demand[index]){
+			jr->combined_buyer.value[i] = B->value[index][i - prev_demand] + prev;
+		}
+		prev = jr->combined_buyer.value[i];
+	}
+
+	int prev_task_count = jr->combined_buyer.tasks_count;
+	jr->combined_buyer.tasks_count += B->tasks_count[index];
+	jr->combined_buyer.tasks_cap += B->tasks_cap[index];
+
+	for (size_t i = prev_task_count; i < jr->combined_buyer.tasks_count; i++){
+		jr->combined_buyer.allocated_tasks[i] = B->allocated_tasks[index][i - prev_task_count];
+	}
+	
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		B->tasks_count[i] = O.tasks_count[i];
+		B->tasks_cap[i] = O.tasks_cap[i];
+		B->allocated_tasks[i] = O.allocated_tasks[i];
+	}
+	if (O.welfare > jr->welfare){
+		jr->A = O.allocation;
+		jr->welfare = O.welfare;
+		jr->O = O;
+	}
+
+
+	return jr;
+}
+
+double pivot_transfer_approximation(Buyers* buyers, Sellers *sellers, double welfare, Agent removed)
+{
+	join_result *jr = NULL;
+	for (size_t i = 0; i < buyers->count; i++){
+		jr = join(buyers, i, sellers, jr, &removed);
+	}
+
+	if (!jr->O.found) return 0.0;
+	double welfare2 = jr->O.welfare;
+	free(jr);
+	return   welfare2 - welfare;
+}
+
+auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers)
+{
+	join_result *jr = NULL;
+	for (size_t i = 0; i < buyers.count; i++){
+		jr = join(&buyers, i, &sellers, jr, NULL);
+	}
+
 	auction_results ar = {0};
+	double *prices = malloc(sizeof(double) * buyers.count);
+	for (size_t j = 0; j < buyers.count; ++j) {
+		prices[j] = 0;
+		for (size_t k = 0; k < sellers.count; k++){
+			if (jr->O.allocation.quantity[k][j]){
+				Agent agent = { .type = AGENT_BUYER, .index = j };
+				prices[j] = pivot_transfer_approximation(&buyers, &sellers, jr->welfare, agent);
+			}
+		}
+	}
+
+	double *costs = malloc(sizeof(double) * sellers.count);
+	for (size_t i = 0; i < sellers.count; ++i) {
+		costs[i] = 0;
+		for (size_t j = 0; j < buyers.count; ++j){
+			if (jr->O.allocation.quantity[i][j]){
+				Agent agent = { .type = AGENT_SELLER, .index = i };
+				costs[i] = pivot_transfer_approximation(&buyers, &sellers, jr->welfare, agent);
+
+			}
+		}
+	}
+	
+	ar.buyer_payments  = prices;
+	ar.seller_payments = costs;
+	ar.allocation = jr->A;
+	memcpy(ar.tasks_count, jr->O.tasks_count, sizeof(ar.tasks_count));
+	memcpy( ar.tasks_cap, jr->O.tasks_cap, sizeof(ar.tasks_cap));
+	memcpy( ar.allocated_tasks, jr->O.allocated_tasks,sizeof(ar.allocated_tasks));
+	
 	return ar;
 }
