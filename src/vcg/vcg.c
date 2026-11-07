@@ -181,6 +181,11 @@ Optimum optimize (Buyers* buyers, Sellers *sellers, Agent *excluded)
 	search.x.cols = buyers->count;
 
 	enumerate(&search, 0);
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		if(search.buyers->allocated_tasks[i] != NULL && search.buyers->allocated_tasks[i] != buyers->allocated_tasks[i]){
+			free(search.buyers->allocated_tasks[i]);
+		}
+	}
 	return search.best;
 }
 
@@ -188,7 +193,11 @@ double pivot_transfer(Buyers* buyers, Sellers *sellers, Allocation *chosen, Agen
 {
 	double wo = welfare(buyers, sellers, chosen, &removed);
 	Optimum agentless = optimize(buyers, sellers, &removed);
-
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		if(agentless.allocated_tasks[i] != NULL && agentless.allocated_tasks[i] != buyers->allocated_tasks[i]){
+			free(agentless.allocated_tasks[i]);
+		}
+	}
 	if (!agentless.found) return 0.0;
 
 	return  agentless.welfare - wo;
@@ -237,10 +246,12 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 	
 	ar.buyer_payments  = prices;
 	ar.seller_payments = costs;
-	ar.allocation = result.allocation;
+	memcpy(&ar.allocation, &result.allocation, sizeof(ar.allocation));
 	memcpy(ar.tasks_count, result.tasks_count, sizeof(ar.tasks_count));
 	memcpy( ar.tasks_cap, result.tasks_cap, sizeof(ar.tasks_cap));
 	memcpy( ar.allocated_tasks, result.allocated_tasks,sizeof(ar.allocated_tasks));
+
+
 	//For debug:
 	//printf("Welfare: %lf\n", welfare(&buyers, &sellers, &ar.allocation, NULL));
 
@@ -525,53 +536,57 @@ join_result* join(Buyers *B, size_t index, Sellers *S, join_result *jr, Agent *e
 		}
 	}
 	
-
 	Buyers B2 = {0};
-	B2 = *B;
+	Optimum O = {0};
 	if (index == 0){
+		B2 = *B;
 		for (size_t i = 1; i < MAX_AGENTS; i++){
 			B2.demand[i] = 0;
 			
 		}
+		O = optimize(&B2, S, excluded);
 	}else{
+
+
+		B2 = *B;
+
+		B2.value[0] = malloc(sizeof(B2.value[0]) * jr->combined_buyer.demand);
+		B2.allocated_tasks[0] = malloc(sizeof(*B2.allocated_tasks[0]) * jr->combined_buyer.tasks_cap);
+
+		B2.demand[0] = jr->combined_buyer.demand;
+		B2.used_demand[0] = jr->combined_buyer.used_demand;
+
+		for (int i = 0; i < jr->combined_buyer.demand; i++){
+			B2.value[0][i] = jr->combined_buyer.value[i];
+		}
+
+		B2.tasks_count[0] = jr->combined_buyer.tasks_count;
+		B2.tasks_cap[0] = jr->combined_buyer.tasks_cap;
+		
+		for (size_t i = 0; i < jr->combined_buyer.tasks_count; i++){
+			B2.allocated_tasks[0][i] = jr->combined_buyer.allocated_tasks[i];
+		}
+
 		for (size_t i = 1; i < MAX_AGENTS; i++){
 			if (i == index) continue;
 			B2.demand[i] = 0;
 		}
-		if (jr->combined_buyer.demand > B->demand[0]){
-			B->value[0] = realloc(B->value[0], sizeof(B->value[0]) * jr->combined_buyer.demand);
-		}
-		if (jr->combined_buyer.tasks_cap > B->tasks_cap[0]){
-			B->allocated_tasks[0] = realloc(B->allocated_tasks[0], sizeof(B->allocated_tasks[0]) * jr->combined_buyer.tasks_cap);
-		}
-
-
-		B->demand[0] = jr->combined_buyer.demand;
-		B->used_demand[0] = jr->combined_buyer.used_demand;
-
-		for (int i = 0; i < jr->combined_buyer.demand; i++){
-			B->value[0][i] = jr->combined_buyer.value[i];
-		}
-
-		B->tasks_count[0] = jr->combined_buyer.tasks_count;
-		B->tasks_cap[0] = jr->combined_buyer.tasks_cap;
-		
-		for (size_t i = 0; i < jr->combined_buyer.tasks_count; i++){
-			B->allocated_tasks[index][i] = jr->combined_buyer.allocated_tasks[i];
-		}
-
+		O = optimize(&B2, S, excluded);
+	
+		free(B2.value[0]);	
+		free(B2.allocated_tasks[0]);
 
 	}
-	Optimum O = optimize(&B2, S, excluded);
 
+	
 	int prev_demand = jr->combined_buyer.demand;
 
 	if (jr->combined_buyer.tasks_cap < B->tasks_cap[index]){
 		jr->combined_buyer.allocated_tasks = realloc(jr->combined_buyer.allocated_tasks, sizeof(jr->combined_buyer.allocated_tasks) * B->tasks_cap[index]);
 	}
 
-	jr->combined_buyer.demand += B->demand[index];
-	jr->combined_buyer.used_demand += B->used_demand[index];
+	jr->combined_buyer.demand = jr->combined_buyer.demand > B->demand[index] ? jr->combined_buyer.demand : B->demand[index];
+	jr->combined_buyer.used_demand = jr->combined_buyer.used_demand > B->used_demand[index] ? jr->combined_buyer.used_demand : B->used_demand[index];
 	if (B->demand[index] > 0){
 		jr->combined_buyer.value = realloc(jr->combined_buyer.value, sizeof(jr->combined_buyer.value) * jr->combined_buyer.demand);
 	}
@@ -613,8 +628,19 @@ double pivot_transfer_approximation(Buyers* buyers, Sellers *sellers, double wel
 		jr = join(buyers, i, sellers, jr, &removed);
 	}
 
-	if (!jr->O.found) return 0.0;
+	if (!jr->O.found) {
+		free(jr->combined_buyer.value);
+		free(jr);
+		return 0.0;
+	}
 	double welfare2 = jr->O.welfare;
+	for (size_t i = 0; i < MAX_AGENTS; i++){
+		if(jr->O.allocated_tasks[i] != NULL && jr->O.allocated_tasks[i] != buyers->allocated_tasks[i]){
+			free(jr->O.allocated_tasks[i]);
+		}
+	}
+	free(jr->combined_buyer.allocated_tasks);
+	free(jr->combined_buyer.value);
 	free(jr);
 	return   welfare2 - welfare;
 }
@@ -652,10 +678,14 @@ auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers)
 	
 	ar.buyer_payments  = prices;
 	ar.seller_payments = costs;
-	ar.allocation = jr->A;
+	memcpy(&ar.allocation, &jr->A, sizeof(jr->A));
 	memcpy(ar.tasks_count, jr->O.tasks_count, sizeof(ar.tasks_count));
 	memcpy( ar.tasks_cap, jr->O.tasks_cap, sizeof(ar.tasks_cap));
 	memcpy( ar.allocated_tasks, jr->O.allocated_tasks,sizeof(ar.allocated_tasks));
+
+	
+	free(jr->combined_buyer.value);
+	free(jr);
 	
 	return ar;
 }
