@@ -64,7 +64,7 @@ class Registry[T]:
 tasks = Registry[ports.TaskStore]("task_store", ports.TaskStore)
 auctions = Registry[ports.AuctionStore]("auction_store", ports.AuctionStore)
 bids = Registry[ports.BidPool]("bid_pool", ports.BidPool)
-bundlers = Registry[ports.Bundler]("bundler", ports.Bundler)
+groupers = Registry[ports.Grouper]("grouper", ports.Grouper)
 eligibility = Registry[ports.Eligibility]("eligibility_rule", ports.Eligibility)
 solvers = Registry[ports.Solver]("solver", ports.Solver)
 engines = Registry[ports.ClearingEngine]("engine", ports.ClearingEngine)

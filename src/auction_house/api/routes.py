@@ -56,20 +56,21 @@ def get_auction(auction_id: uuid.UUID, house: House) -> AuctionView:
     return house.view(house.get_auction(auction_id))
 
 
-@bidders.put("/auctions/{auction_id}/tasks/{task_id}/bid", status_code=status.HTTP_204_NO_CONTENT)
+@bidders.put("/auctions/{auction_id}/bid", status_code=status.HTTP_204_NO_CONTENT)
 def place_bid(
-    auction_id: uuid.UUID, task_id: uuid.UUID, request: BidRequest, bidder_id: Bidder, house: House
+    auction_id: uuid.UUID, request: BidRequest, bidder_id: Bidder, house: House
 ) -> Response:
-    """Place or replace your sealed bid on one task of an open auction. You can bid
-    on as many of its tasks as you like."""
-    house.submit_bid(auction_id, task_id, bidder_id, request)
+    """Place or replace your sealed bid on an open auction. The bid lists the bundles
+    of tasks you are willing to run, each with its price. Replacing a bid replaces
+    all of its bundles."""
+    house.submit_bid(auction_id, bidder_id, request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@bidders.get("/auctions/{auction_id}/bids")
-def my_bids(auction_id: uuid.UUID, bidder_id: Bidder, house: House) -> list[Bid]:
-    """Read back your own bids in this auction. Nobody else's are readable."""
-    return house.own_bids(auction_id, bidder_id)
+@bidders.get("/auctions/{auction_id}/bid")
+def my_bid(auction_id: uuid.UUID, bidder_id: Bidder, house: House) -> Bid:
+    """Read back your own bid in this auction. Nobody else's is readable."""
+    return house.own_bid(auction_id, bidder_id)
 
 
 @bidders.get("/announcements", responses={200: {"content": {"text/event-stream": {}}}})
@@ -93,7 +94,7 @@ async def announcements(bidder_id: Bidder, announcer: Announcer) -> StreamingRes
 
 @bidders.get("/assignments")
 def my_assignments(bidder_id: Bidder, house: House) -> list[Assignment]:
-    """Tasks you won, what you are paid for them, and the images to run."""
+    """Tasks you won, grouped by auction, and what you are paid for each group."""
     return house.assignments_of(bidder_id)
 
 
@@ -110,7 +111,7 @@ def report_result(task_id: uuid.UUID, report: ResultReport, bidder_id: Bidder, h
 
 @operators.post("/auctions", status_code=status.HTTP_201_CREATED)
 def open_auctions(house: House) -> list[Auction]:
-    """Bundle the pending tasks and open auctions now, instead of waiting for the timer."""
+    """Group the pending tasks into auctions now, instead of waiting for the timer."""
     return house.open_auctions()
 
 

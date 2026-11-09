@@ -14,7 +14,7 @@ def build_house(settings: Settings) -> AuctionHouse:
             tasks=plugins.tasks.create(settings.task_store),
             auctions=plugins.auctions.create(settings.auction_store),
             bids=plugins.bids.create(settings.bid_pool),
-            bundler=plugins.bundlers.create(settings.bundler),
+            grouper=plugins.groupers.create(settings.grouper),
             eligibility=plugins.eligibility.create(settings.eligibility),
             engine=plugins.engines.create(settings.engine, solver=solver),
             deployer=plugins.deployers.create(settings.deployer),

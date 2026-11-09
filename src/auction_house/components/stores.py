@@ -21,7 +21,7 @@ from auction_house.domain import (
 class InMemoryTaskStore:
     def __init__(self):
         self._tasks: dict[uuid.UUID, Task] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.Lock() # for locking the memory store when adding, updating or listing tasks
 
     def add(self, task: Task) -> None:
         """:3"""
@@ -51,45 +51,48 @@ class InMemoryTaskStore:
 class InMemoryAuctionStore:
     def __init__(self):
         self._auctions: dict[uuid.UUID, Auction] = {}
+        self._lock = threading.Lock() # for locking the memory store when adding, updating or listing auctions
 
     def put(self, auction: Auction) -> None:
         """:3"""
-        self._auctions[auction.auction_id] = auction
+        with self._lock:
+            self._auctions[auction.auction_id] = auction
 
     def get(self, auction_id: uuid.UUID) -> Auction:
         """:3"""
-        try:
-            return self._auctions[auction_id]
-        except KeyError:
-            raise UnknownAuction(str(auction_id)) from None
+        with self._lock:
+            try:
+                return self._auctions[auction_id]
+            except KeyError:
+                raise UnknownAuction(str(auction_id)) from None
 
     def all(self) -> list[Auction]:
         """:3"""
-        return list(self._auctions.values())
+        with self._lock:
+            return list(self._auctions.values())
 
 
 @plugins.bids.register("memory")
 class InMemoryBidPool:
-    """Bids kept in memory: one per bidder and task in each auction."""
- 
+    """Bids kept in memory: one per bidder in each auction."""
+
     def __init__(self):
-        # auction -> (bidder, task) -> bid
-        self._bids: defaultdict[uuid.UUID, dict[tuple[str, uuid.UUID], Bid]] = defaultdict(dict)
-        # `own_bids` reads without the house's lock, so the pool guards its own state.
+        # auction -> bidder -> bid
+        self._bids: defaultdict[uuid.UUID, dict[str, Bid]] = defaultdict(dict)
+        # `own_bid` reads without the house's lock, so the pool guards its own state.
         self._lock = threading.Lock()
- 
-    def put(self, auction_id: uuid.UUID, bid: Bid) -> None:
-        """:3"""
+
+    def put(self, bid: Bid) -> None:
+        """:3 Store the bid, replacing any earlier bid by the same bidder in the same auction."""
         with self._lock:
-            self._bids[auction_id][(bid.bidder_id, bid.task_id)] = bid
- 
-    def of(self, auction_id: uuid.UUID, bidder_id: str) -> list[Bid]:
-        """:3"""
+            self._bids[bid.auction_id][bid.bidder_id] = bid
+
+    def of(self, auction_id: uuid.UUID, bidder_id: str) -> Bid | None:
+        """:3 The bidder's bid in the auction, or None if they have not bid."""
         with self._lock:
-            return [b for b in self._bids.get(auction_id, {}).values() if b.bidder_id == bidder_id]
- 
+            return self._bids.get(auction_id, {}).get(bidder_id)
+
     def all(self, auction_id: uuid.UUID) -> list[Bid]:
-        """:3"""
+        """:3 Every bid in the auction. The house reads this only when it clears."""
         with self._lock:
             return list(self._bids.get(auction_id, {}).values())
-

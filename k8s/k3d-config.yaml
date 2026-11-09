@@ -1,0 +1,27 @@
+# k8s/k3d-config.yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+    name: auction
+servers: 1
+agents: 3
+ports:
+    - port: 7777:30777
+      nodeFilters:
+          - server:0
+options:
+    k3s:
+        extraArgs:
+            - arg: --disable=traefik
+              nodeFilters:
+                  - server:0
+        nodeLabels:
+            - label: auction/bidder=alice
+              nodeFilters:
+                  - agent:0
+            - label: auction/bidder=bob
+              nodeFilters:
+                  - agent:1
+            - label: auction/bidder=carol
+              nodeFilters:
+                  - agent:2

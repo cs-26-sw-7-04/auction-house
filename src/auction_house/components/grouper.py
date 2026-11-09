@@ -5,11 +5,11 @@ from auction_house import plugins
 from auction_house.domain import Task
 
 
-@plugins.bundlers.register("batch")
-class BatchBundler:
+@plugins.groupers.register("batch")
+class BatchGrouper:
     """Oldest first, at most `size` tasks per auction."""
 
-    def __init__(self, size: int = 8):
+    def __init__(self, size: int = 32): # TODO: make this configurable
         if size < 1:
             raise ValueError("size must be at least 1")
         self.size = size
