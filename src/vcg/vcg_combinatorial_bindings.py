@@ -16,18 +16,18 @@ vcglib = ctypes.CDLL(so_file)
 
 
 class comb_bid_c(ctypes.Structure):
-    _feilds_ = [ ("tasks", ctypes.POINTER(ctypes.c_int)),
+    _fields_ = [ ("tasks", ctypes.POINTER(ctypes.c_int)),
                  ("task_count", ctypes.c_size_t),
                  ("bidder", ctypes.c_int),
                  ("price", ctypes.c_int64)]
 
 class comb_award_c(ctypes.Structure):
-    _feilds_ = [("task", ctypes.c_int),
+    _fields_ = [("task", ctypes.c_int),
                 ("bidder", ctypes.c_int),
                 ("bid", ctypes.c_size_t),
                 ("payment",ctypes.c_int64)]
 class comb_outcome_c(ctypes.Structure):
-    _feilds_ = [("ok", ctypes.c_bool),
+    _fields_ = [("ok", ctypes.c_bool),
                 ("awards",ctypes.POINTER(comb_award_c)),
                 ("award_count", ctypes.c_size_t),
                 ("unallocated", ctypes.POINTER(ctypes.c_int)),
@@ -35,5 +35,5 @@ class comb_outcome_c(ctypes.Structure):
                 ("welfare", ctypes.c_int64)]
 # comb_outcome vcg_comb_clear(const int64_t *values, size_t task_count, const comb_bid *bids, size_t bid_count, comb_solver solver);
 
-vcglib.vcg_auction.argtypes = [ctypes.POINTER(ctypes.c_int64),ctypes.c_size_t, ctypes.POINTER(comb_bind_c), ctypes.c_size_t, ctypes_c_int]
-vcglib.vcg_auction.restype = comb_outcome_c
+vcglib.vcg_comb_clear.argtypes = [ctypes.POINTER(ctypes.c_int64),ctypes.c_size_t, ctypes.POINTER(comb_bid_c), ctypes.c_size_t, ctypes.c_int]
+vcglib.vcg_comb_clear.restype = comb_outcome_c
