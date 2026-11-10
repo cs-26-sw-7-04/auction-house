@@ -13,9 +13,8 @@ def main():
 
     x = data['Agents']
     plt.plot(x, data["time1"], marker='o', linestyle='-', label="single threaded")
-    plt.plot(x, data["time2"], marker='o', linestyle='-', label="multithreaded")
     #plt.plot(x, data["delta1"], marker='o', linestyle='-', label="delta time multithread vs. single threaded")
-    plt.plot(x, data["time3"], marker='o', linestyle='-', label="Approximation")
+    plt.plot(x, data["time2"], marker='o', linestyle='-', label="Approximation")
     #plt.plot(x, data["delta2"], marker='o', linestyle='-', label="delta time approximation vs. single threaded")
     plt.title("Time")
     plt.ylabel("Time (s)")
