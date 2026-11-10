@@ -30,17 +30,17 @@ class AuctionStore(Protocol):
 @runtime_checkable
 class BidPool(Protocol):
     """Sealed storage. The house reads `all` only when it clears."""
-    def put(self, auction_id: uuid.UUID, bid: auction_house.domain.Bid) -> None:
-        """Store the bid, replacing the same bidder's earlier bid on the same task."""
-    def of(self, auction_id: uuid.UUID, bidder_id: str) -> list[auction_house.domain.Bid]:
-        """The bids this bidder has placed in the auction."""
+    def put(self, bid: auction_house.domain.Bid) -> None:
+        """Store the bid, replacing any earlier bid by the same bidder in the same auction."""
+    def of(self, auction_id: uuid.UUID, bidder_id: str) -> auction_house.domain.Bid | None:
+        """The bidder's bid in the auction, or None if they have not bid."""
     def all(self, auction_id: uuid.UUID) -> list[auction_house.domain.Bid]: ...
 
 
 @runtime_checkable
-class Bundler(Protocol):
+class Grouper(Protocol):
     def plan(self, pending: Sequence[auction_house.domain.Task]) -> list[list[auction_house.domain.Task]]:
-        """Split pending tasks into collections, each sold in one auction."""
+        """Split pending tasks into groups, each sold in one auction."""
 
 
 @runtime_checkable
@@ -51,20 +51,21 @@ class Eligibility(Protocol):
 
 @runtime_checkable
 class Solver(Protocol):
-    def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[auction_house.domain.Bid]) -> auction_house.domain.Selection:
-        """Allocate tasks (valued by their submitters) to bidders for maximal
-        welfare. A bid is for one task, and each task goes to at most one bidder."""
+    def solve( self, values: Mapping[uuid.UUID, int], bids: Sequence[auction_house.domain.Bid], *, exclude: str | None = None,
+    ) -> auction_house.domain.Selection:
+        """Allocate tasks (valued by their submitters) to bidders for maximal welfare. 
+        Each bidder gets at most one of their bundles, and each task goes to at most one bidder"""
 
 
 @runtime_checkable
 class ClearingEngine(Protocol):
     def clear(self, values: Mapping[uuid.UUID, int], bids: Sequence[auction_house.domain.Bid]) -> auction_house.domain.Outcome:
-        """Pick the winners and decide what each is paid."""
+        """Pick the winners and decide what each is paid. One `Award` per winning bidder."""
 
 
 @runtime_checkable
 class Deployer(Protocol):
-    def deploy(self, task: auction_house.domain.Task, award: auction_house.domain.Award) -> str:
+    def deploy(self, task: auction_house.domain.Task, bidder_id: str) -> str:
         """Start the task on the winner's node. Returns a handle."""
 
 

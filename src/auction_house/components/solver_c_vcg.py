@@ -9,6 +9,8 @@ from auction_house.domain import Bid, Selection, SolverError
 DEFAULT_LIBRARY = Path(__file__).resolve().parents[2] / "vcg" / "build" / "lib" / "libvcg.so" # TODO: Define actual path instead og this nonsense
 
 
+# TODO: rewrite to use ocmvinatorial vcg implementation
+
 @plugins.solvers.register("c")
 class CVcgSolver:
     """Tasks are buyers (demand 1, value = budget), bidders are sellers."""

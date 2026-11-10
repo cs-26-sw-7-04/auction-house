@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: auction
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    name: auction-house
+    namespace: auction
+---
+# The house only creates Jobs. get/list/delete are for debugging and cleanup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+    name: auction-house-jobs
+    namespace: auction
+rules:
+    - apiGroups: ["batch"]
+      resources: ["jobs"]
+      verbs: ["create", "get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+    name: auction-house-jobs
+    namespace: auction
+subjects:
+    - kind: ServiceAccount
+      name: auction-house
+      namespace: auction
+roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: auction-house-jobs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: auction-house-config
+    namespace: auction
+data:
+    AH_AUTO_RUN: "true"
+    AH_BIDDING_WINDOW: "PT30S"
+    AH_TICK: "PT1S"
+    AH_MAX_ROUNDS: "3"
+    AH_SOLVER__NAME: "brute-force"
+    AH_ENGINE__NAME: "vcg"
+    AH_DEPLOYER__NAME: "kubernetes"
+    AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true}'
+---
+# Demo keys only. Replace them for anything that is not a local demo.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: auction-house-keys
+    namespace: auction
+type: Opaque
+stringData:
+    AH_API_KEYS: >-
+        {
+        "op-key":    {"role": "operator",  "id": "ops"},
+        "sub-key":   {"role": "submitter", "id": "submitter1"},
+        "alice-key": {"role": "bidder",    "id": "alice"},
+        "bob-key":   {"role": "bidder",    "id": "bob"},
+        "carol-key": {"role": "bidder",    "id": "carol"}
+        }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: auction-house
+    namespace: auction
+spec:
+    # State is in memory and the lock is per process: exactly one replica,
+    # and never two pods at once during a rollout.
+    replicas: 1
+    strategy:
+        type: Recreate
+    selector:
+        matchLabels:
+            app: auction-house
+    template:
+        metadata:
+            labels:
+                app: auction-house
+        spec:
+            serviceAccountName: auction-house
+            containers:
+                - name: house
+                  image: auction-house:dev
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                      - containerPort: 7777
+                  envFrom:
+                      - configMapRef:
+                            name: auction-house-config
+                      - secretRef:
+                            name: auction-house-keys
+                  readinessProbe:
+                      httpGet:
+                          path: /health
+                          port: 7777
+                      periodSeconds: 5
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          port: 7777
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                  resources:
+                      requests:
+                          cpu: 100m
+                          memory: 128Mi
+                      limits:
+                          memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: auction-house
+    namespace: auction
+spec:
+    type: NodePort
+    selector:
+        app: auction-house
+    ports:
+        - port: 7777
+          targetPort: 7777
+          nodePort: 30777

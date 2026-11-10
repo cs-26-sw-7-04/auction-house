@@ -38,6 +38,7 @@ class Resources(Model):
     cpu_millis: int = Field(500, gt=0)
     memory_mb: int = Field(256, gt=0)
     gpu: bool = False
+    flops: int = Field(1, gt=0)
 
 
 class Verification(enum.StrEnum):
@@ -84,7 +85,7 @@ class Task(Model):
     """A task as the house stores it.
     
     the submitter's spec plus what the house has learned about it since. 
-    Is immutable."""
+    Is immutable.   """
     task_id: uuid.UUID
     owner: str
     spec: TaskSpec
@@ -105,25 +106,32 @@ class TaskOffer(Model):
 
 # --- Bids and outcomes ---------------------------------------------------------
 
+class BundleBid(Model):
+    """A bid for a bundle of tasks, with one price for all of them together.
+    {"tasks": ["<task_id>", "<task_id>"], "price": 100}"""
+    tasks: frozenset[uuid.UUID] = Field(min_length=1)
+    price: int = Field(ge=0, description="Price asked to run all tasks in the bundle")
+
+
 class BidRequest(Model):
-    """Sealed: only the bidder who placed it and the house can read it. The task it
-    is for is supplied separately; see `Bid`."""
-    #capacity: int = Field(ge=1, description="Most tasks the bidder can run in this auction")
-    price: int = Field(ge=0, description="Price asked to run task")
+    """Sealed: only the bidder who placed it and the house can read it.
+    Bids are XOR: the bidder runs at most one of the listed bundles."""
+    bundles: tuple[BundleBid, ...] = Field(min_length=1, max_length=64+64, description="The bidder runs at most one of these bundles")
 
 
 class Bid(BidRequest):
     """A bid as stored: the request plus the task it is for, who placed it and when."""
-    task_id: uuid.UUID
+    auction_id: uuid.UUID
     bidder_id: str
     placed_at: UtcDatetime
 
 
 class Award(Model):
-    """One task awarded to one bidder, and what the bidder is paid for it, which the
-    clearing rule may set above or below the price asked."""
-    task_id: uuid.UUID
+    """What one winning bidder gets from one auction: the tasks of all its winning bids,
+    and what it is paid for them in total, which the clearing rule may set above or
+    below the prices asked."""
     bidder_id: str
+    task_ids: tuple[uuid.UUID, ...] = Field(min_length=1)
     payment: int
 
 
@@ -136,8 +144,8 @@ class Outcome(Model):
 
 
 class Selection(Model):
-    """A solver's allocation: which bidder runs which task."""
-    assignment: dict[uuid.UUID, str]
+    """A solver's allocation: the bundle each winning bidder runs."""
+    winners: dict[str, BundleBid]
     welfare: int
 
 
@@ -164,7 +172,8 @@ class Auction(Model):
     closes_at: UtcDatetime
     status: AuctionStatus = AuctionStatus.OPEN
     outcome: Outcome | None = None
-    handles: dict[uuid.UUID, str] = {}
+    # keyed by task, as deployer creates one job per task
+    handles: dict[uuid.UUID, str] = {} 
 
 
 class Announcement(Model):
@@ -177,10 +186,10 @@ class Announcement(Model):
 
 
 class Assignment(Model):
-    """An award as the winning bidder sees it, with the payload it may now run."""
+    """An award as the winning bidder sees it, with the payloads it may now run."""
     auction_id: uuid.UUID
     award: Award
-    task: Task
+    task_ids: tuple[uuid.UUID, ...]
 
 
 # --- Errors ----------------------------------------------------------------------
@@ -200,6 +209,9 @@ class UnknownAuction(NotFound): ...
 class AuctionClosed(Conflict): ...
 class InvalidTask(Invalid): ...
 class InvalidBid(Invalid): ...
+class DuplicateBid(Conflict): ...
+class Nobid(NotFound): ...
+class InvalidBundle(Invalid): ...
 class IneligibleBid(Invalid): ...
 class NotAssigned(Forbidden): ...
 class SolverError(Unavailable): ...

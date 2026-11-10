@@ -32,3 +32,72 @@ config.py        settings; chooses components by name
 bootstrap.py     settings -> wired AuctionHouse
 api/             FastAPI: app factory, auth dependencies, routers
 ```
+
+
+## Build and check auctionhouse container
+
+```
+docker build -t auction-house:dev .
+docker run --rm auction-house:dev python -c "import auction_house, kubernetes; print(auction_house.__file__)"
+docker run --rm -p 7777:7777 auction-house:dev
+```
+
+## k3d
+
+### Create cluster with 3 bidders agents + control plane
+
+```
+k3d cluster create auction \
+    --servers 1 --agents 3 \
+    --k3s-node-label "auction/bidder=alice@agent:0" \
+    --k3s-node-label "auction/bidder=bob@agent:1" \
+    --k3s-node-label "auction/bidder=carol@agent:2" \
+    -p "7777:30777@server:0" \
+    --k3s-arg "--disable=traefik@server:0"
+
+kubectl get nodes -L auction/bidder
+```
+
+### Import images (Auction house + whatever task)
+
+```
+k3d image import auction-house:dev -c auction
+k3d image import busybox:latest -c auction   # or whatever image the demo tasks use
+```
+
+### Deploy the house
+
+```
+kubectl apply -f k8s/house.yaml
+kubectl -n auction rollout status deploy/auction-house
+kubectl -n auction logs deploy/auction-house
+curl localhost:7777/health
+```
+
+### Check the house before testing Kubernetes
+
+First time:
+```
+kubectl -n auction set env deploy/auction-house AH_DEPLOYER__NAME=log AH_DEPLOYER__OPTIONS-
+```
+
+Consequtivly:
+```
+kubectl -n auction set env deploy/auction-house \
+    AH_DEPLOYER__NAME=kubernetes \
+    AH_DEPLOYER__OPTIONS='{"namespace": "auction", "pin_to_node": true}'
+```
+
+### Watch jobs
+
+```
+kubectl -n auction get jobs,pods -o wide -w
+```
+
+### Apply and restart auction house
+
+```
+kubectl apply -f k8s/house.yaml
+kubectl -n auction rollout restart deploy/auction-house
+kubectl -n auction logs deploy/auction-house -f
+```

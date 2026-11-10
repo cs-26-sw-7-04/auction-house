@@ -4,9 +4,9 @@ import uuid
 
 import pytest
 
-from auction_house.components.c_vcg import DEFAULT_LIBRARY, CVcgSolver
+from auction_house.components.solver_c_vcg import DEFAULT_LIBRARY, CVcgSolver
 from auction_house.components.engines import PayAsBidEngine, VcgEngine
-from auction_house.components.solvers import SortedSolver
+from auction_house.components.solver_brute_force import SortedSolver
 from auction_house.domain import Bid, utcnow
 
 SOLVERS = [
