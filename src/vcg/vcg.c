@@ -262,6 +262,7 @@ auction_results vcg_auction(Buyers buyers, Sellers sellers)
 
 void print_allocation(Allocation x)
 {
+	if (x.cols < 1 || x.rows < 1) return;
 	printf("+");
 	for (int i = 0; i < x.cols; i++){
 		printf("---");
@@ -680,8 +681,8 @@ auction_results vcg_auction_approximation(Buyers buyers, Sellers sellers)
 	ar.seller_payments = costs;
 	memcpy(&ar.allocation, &jr->A, sizeof(jr->A));
 	memcpy(ar.tasks_count, jr->O.tasks_count, sizeof(ar.tasks_count));
-	memcpy( ar.tasks_cap, jr->O.tasks_cap, sizeof(ar.tasks_cap));
-	memcpy( ar.allocated_tasks, jr->O.allocated_tasks,sizeof(ar.allocated_tasks));
+	memcpy(ar.tasks_cap, jr->O.tasks_cap, sizeof(ar.tasks_cap));
+	memcpy(ar.allocated_tasks, jr->O.allocated_tasks,sizeof(ar.allocated_tasks));
 
 	
 	free(jr->combined_buyer.value);
