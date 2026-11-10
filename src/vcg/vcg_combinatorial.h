@@ -72,5 +72,6 @@ void comb_outcome_free(comb_outcome *outcome);
 void comb_split(int64_t total, const int64_t *weights, size_t n, int64_t *out);
 
 const char *comb_solver_name(comb_solver solver);
-
+comb_outcome vcg_comb_clear(const int64_t *values, size_t task_count,
+                            const comb_bid *bids, size_t bid_count, comb_solver solver);
 #endif
