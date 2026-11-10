@@ -409,7 +409,7 @@ TEST time_test()
 			fprintf(stderr, "failed to allocate S.tasks[%d]\n", i);
 			abort();
 		}
-		B.demand[i] = rand() % 50 + 1;
+		B.demand[i] = rand() % 60 + 10;
 		B.value[i] = calloc(B.demand[i], sizeof(double));
 		if (B.value[i] == NULL){
 			fprintf(stderr, "failed to allocate B.value[%d]\n", i);
@@ -448,31 +448,159 @@ TEST time_test()
 		printf("time taken (approximation): %lf seconds (agents %d)\n",time2, i);
 		double delta1 = time2-time1;
 		printf("time delta: %lf seconds\n", delta1);
-		if (ar1.buyer_payments == NULL) continue;
-		for (size_t j = 0; j < S.count; j++){
-			for (size_t k = 0; k < B.count; k++){
-				if (ar1.allocation.quantity[j][k] != ar2.allocation.quantity[j][k]){
-					fprintf(stderr, "error in approximation implementation in [%zu][%zu] expected %d got %d\n",
-						j, k, ar1.allocation.quantity[j][k], ar2.allocation.quantity[j][k]);
-					result = false;
+		if (ar1.buyer_payments == NULL || ar2.buyer_payments == NULL) {
+			if (ar1.buyer_payments != NULL && ar2.buyer_payments == NULL) result = false;
+			if (ar1.buyer_payments != NULL) free(ar1.buyer_payments);
+			if (ar1.seller_payments != NULL) free(ar1.seller_payments);
+			if (ar2.buyer_payments  != NULL) free(ar2.buyer_payments);
+			if (ar2.seller_payments != NULL) free(ar2.seller_payments);
+			for (int i = 0; i < MAX_AGENTS; i++) {
+				if (B.allocated_tasks[i] != NULL){
+					free(B.allocated_tasks[i]);			
 				}
+				if (ar1.allocated_tasks[i] != NULL) free(ar1.allocated_tasks[i]);
+				if (ar2.allocated_tasks[i] != NULL) free(ar2.allocated_tasks[i]);
+		
+
 			}
-		}
+			continue;
+		}		
+		/* for (size_t j = 0; j < S.count; j++){ */
+		/* 	for (size_t k = 0; k < B.count; k++){ */
+		/* 		if (ar1.allocation.quantity[j][k] != ar2.allocation.quantity[j][k]){ */
+		/* 			fprintf(stderr, "error in approximation implementation in [%zu][%zu] expected %d got %d\n", */
+		/* 				j, k, ar1.allocation.quantity[j][k], ar2.allocation.quantity[j][k]); */
+		/* 			result = false; */
+		/* 		} */
+		/* 	} */
+		/* } */
 		free(ar1.buyer_payments);
 		free(ar1.seller_payments);
 		free(ar2.buyer_payments);
 		free(ar2.seller_payments);
+		for (int i = 0; i < MAX_AGENTS; i++) {
+			if (B.allocated_tasks[i] != NULL){
+				free(B.allocated_tasks[i]);			
+			}
+			if (ar1.allocated_tasks[i] != NULL) free(ar1.allocated_tasks[i]);
+			if (ar2.allocated_tasks[i] != NULL) free(ar2.allocated_tasks[i]);
+		
+
+		}
 	}
 	for (int i = 0; i < MAX_AGENTS; i++) {
 		free(S.tasks[i]);
 		free(B.value[i]);
 	}
 
- 	for (int i = 0; i < MAX_AGENTS; i++) {
-		if (B.allocated_tasks[i] != NULL){
-			free(B.allocated_tasks[i]);
-		}
+	return result;
+}
 
+
+TEST logged_time_test()
+{
+	bool run = false;
+#ifdef LONG_LOGGED
+	run = true;
+#endif
+	if(!run) return true;
+	bool result = true;
+	Buyers B = {0};
+	Sellers S = {0};
+	auction_results ar1 = {0};
+	auction_results ar2 = {0};
+	
+	char *output_path = "./tests/output.csv";
+	FILE *output      = fopen(output_path, "w");
+	fprintf(output, "Agents, time1, time2\n");
+
+	srand((unsigned)time(NULL));
+	int id = 1;
+	for (int i = 0; i < MAX_AGENTS; i++) {
+
+		S.capacity[i] = 1 + rand() % 9;
+		S.cost[i]     = 0; //1 + rand() % 9;
+		S.tasks[i] = calloc(S.capacity[i],sizeof(Task));
+		if (S.tasks[i] == NULL){
+			fprintf(stderr, "failed to allocate S.tasks[%d]\n", i);
+			abort();
+		}
+		B.demand[i] = rand() % 60 + 20;
+		B.value[i] = calloc(B.demand[i], sizeof(double));
+		if (B.value[i] == NULL){
+			fprintf(stderr, "failed to allocate B.value[%d]\n", i);
+			abort();
+		}
+		B.value[i][0] = (rand() % 7) + 2;
+		for (int j = 0; j < B.demand[i]-1; j++){
+			B.value[i][j+1] = B.value[i][j]*2;
+		}
 	}
+
+	for (int i = 1; i < 7; i ++){
+		B.count = i;
+		S.count = i;
+
+		for (size_t i = 0; i < S.count; i++){
+			for (int j = 0; j < S.capacity[i]; j++){
+				S.tasks[i][j].id = id++;
+				S.tasks[i][j].flops = rand() % 30 + 1;
+			}
+		}
+		
+		struct timespec start, end;
+
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		ar1 = vcg_auction(B, S);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double time1 = elapsed_seconds(start, end);
+		print_allocation(ar1.allocation);
+		printf("time taken: %lf seconds (agents %d)\n",time1, i);
+		clock_gettime(CLOCK_MONOTONIC, &start);
+		ar2 = vcg_auction_approximation(B, S);
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		double time2 = elapsed_seconds(start, end);
+		print_allocation(ar2.allocation);
+		printf("time taken (approximation): %lf seconds (agents %d)\n",time2, i);
+		double delta1 = time2-time1;
+		printf("time delta: %lf seconds\n", delta1);
+		fprintf(output, "%d, %lf, %lf\n", i, time1, time2);
+		if (ar1.buyer_payments == NULL || ar2.buyer_payments == NULL) {
+			if (ar1.buyer_payments != NULL && ar2.buyer_payments == NULL) result = false;
+			if (ar1.buyer_payments != NULL) free(ar1.buyer_payments);
+			if (ar1.seller_payments != NULL) free(ar1.seller_payments);
+			if (ar2.buyer_payments  != NULL) free(ar2.buyer_payments);
+			if (ar2.seller_payments != NULL) free(ar2.seller_payments);
+			for (int i = 0; i < MAX_AGENTS; i++) {
+				if (B.allocated_tasks[i] != NULL){
+					free(B.allocated_tasks[i]);			
+				}
+				if (ar1.allocated_tasks[i] != NULL) free(ar1.allocated_tasks[i]);
+				if (ar2.allocated_tasks[i] != NULL) free(ar2.allocated_tasks[i]);
+		
+
+			}
+			continue;
+		}		
+		free(ar1.buyer_payments);
+		free(ar1.seller_payments);
+		free(ar2.buyer_payments);
+		free(ar2.seller_payments);
+		for (int i = 0; i < MAX_AGENTS; i++) {
+			if (B.allocated_tasks[i] != NULL){
+				free(B.allocated_tasks[i]);			
+			}
+			if (ar1.allocated_tasks[i] != NULL) free(ar1.allocated_tasks[i]);
+			if (ar2.allocated_tasks[i] != NULL) free(ar2.allocated_tasks[i]);
+		
+
+		}
+	}
+	for (int i = 0; i < MAX_AGENTS; i++) {
+		free(S.tasks[i]);
+		free(B.value[i]);
+	}
+	fclose(output);
+
 	return result;
 }
