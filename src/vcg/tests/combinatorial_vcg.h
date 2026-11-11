@@ -358,30 +358,32 @@ static double comb_seconds(void)
  * once it gets slow. */
 TEST comb_timing()
 {
+	char *output = "./tests/vcg_comb_timing.csv";
+	FILE *out = fopen(output, "w");
 	static comb_auction a;
 	bool result = true;
 	bool too_slow[COMB_SOLVER_COUNT] = {false};
-	printf("%6s %6s %8s", "tasks", "bids", "bidders");
-	for (int s = 0; s < COMB_SOLVER_COUNT; s++) printf(" %18s", comb_solver_name((comb_solver) s));
-	printf("%14s", "timestamp");
-	printf("\n");
-	for (size_t bids = 8; bids <= 512; bids += bids < 128 ? 8 : 32) {
+	fprintf(out, "%6s, %6s, %8s,", "tasks", "bids", "bidders");
+	for (int s = 0; s < COMB_SOLVER_COUNT; s++) fprintf(out, " %18s,", comb_solver_name((comb_solver) s));
+	fprintf(out, "%14s", ",timestamp");
+	fprintf(out, "\n");
+	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
 		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
 		int bidders = (int) bids / 3;
 		comb_rng = 0xC0FFEE + bids;
 		comb_random_auction(&a, tasks, bids, bidders, 4);
-		printf("%6zu %6zu %8d", tasks, bids, bidders);
+		fprintf(out, "%6zu, %6zu, %8d,", tasks, bids, bidders);
 		comb_outcome reference = {0};
 		bool have_reference = false;
 		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
-			if (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2) {
-				printf(" %18s", "skipped");
+			if ( false && (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
+				fprintf(out, " %18s,", "skipped");
 				continue;
 			}
 			double start = comb_seconds();
 			comb_outcome o = vcg_comb_clear(a.values, a.task_count, a.bids, a.bid_count, (comb_solver) s);
 			double took = comb_seconds() - start;
-			printf(" %17.6fs", took);
+			fprintf(out, " %17.6fs,", took);
 			if (took > 2.0) too_slow[s] = true;
 			if (!have_reference) {
 				reference = o;
@@ -393,9 +395,58 @@ TEST comb_timing()
 			}
 		}
 		time_t cur_time = time(NULL);
-		printf("%30s", ctime(&cur_time));
+		fprintf(out, "%30s", ctime(&cur_time));
 		comb_outcome_free(&reference);
 		fflush(stdout);
 	}
+	fclose(out);
+	return result;
+}
+/* Prints how long each solver takes as auctions grow; fails only if the solvers disagree. A solver is skipped
+ * once it gets slow. */
+TEST rand_comb_timing()
+{
+	char *output = "./tests/vcg_rand_comb_timing.csv";
+	FILE *out = fopen(output,"w");
+	static comb_auction a;
+	bool result = true;
+	bool too_slow[COMB_SOLVER_COUNT] = {false};
+	fprintf(out, "%6s %6s %8s", "tasks", "bids", "bidders");
+	for (int s = 0; s < COMB_SOLVER_COUNT; s++) fprintf(out, " %18s", comb_solver_name((comb_solver) s));
+	fprintf(out, "%14s", "timestamp");
+	fprintf(out, "\n");
+	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
+		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
+		int bidders = (int) bids / 3;
+		comb_rng = rand() + bids;
+		comb_random_auction(&a, tasks, bids, bidders, 4);
+		fprintf(out, "%6zu, %6zu, %8d,", tasks, bids, bidders);
+		comb_outcome reference = {0};
+		bool have_reference = false;
+		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
+			if (false && (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
+				fprintf(out, " %18s,", "skipped");
+				continue;
+			}
+			double start = comb_seconds();
+			comb_outcome o = vcg_comb_clear(a.values, a.task_count, a.bids, a.bid_count, (comb_solver) s);
+			double took = comb_seconds() - start;
+			fprintf(out, " %17.6fs,", took);
+			if (took > 2.0) too_slow[s] = true;
+			if (!have_reference) {
+				reference = o;
+				have_reference = true;
+				result &= comb_check_properties(&a, o);
+			} else {
+				result &= comb_same_outcome(reference, o);
+				comb_outcome_free(&o);
+			}
+		}
+		time_t cur_time = time(NULL);
+		fprintf(out, "%30s", ctime(&cur_time));
+		comb_outcome_free(&reference);
+		fflush(stdout);
+	}
+	fclose(out);
 	return result;
 }
