@@ -212,8 +212,8 @@ TEST comb_split_gives_leftovers_to_the_largest_remainders()
 typedef struct {
 	int64_t values[COMB_MAX_TASKS];
 	size_t task_count;
-	comb_bid bids[256];
-	int tasks[256][COMB_MAX_TASKS];
+	comb_bid bids[512];
+	int tasks[512][COMB_MAX_TASKS];
 	size_t bid_count;
 } comb_auction;
 
@@ -363,8 +363,9 @@ TEST comb_timing()
 	bool too_slow[COMB_SOLVER_COUNT] = {false};
 	printf("%6s %6s %8s", "tasks", "bids", "bidders");
 	for (int s = 0; s < COMB_SOLVER_COUNT; s++) printf(" %18s", comb_solver_name((comb_solver) s));
+	printf("%14s", "timestamp");
 	printf("\n");
-	for (size_t bids = 8; bids <= 192; bids += bids < 128 ? 8 : 32) {
+	for (size_t bids = 8; bids <= 512; bids += bids < 128 ? 8 : 32) {
 		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
 		int bidders = (int) bids / 3;
 		comb_rng = 0xC0FFEE + bids;
@@ -373,7 +374,7 @@ TEST comb_timing()
 		comb_outcome reference = {0};
 		bool have_reference = false;
 		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
-			if (too_slow[s]) {
+			if (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2) {
 				printf(" %18s", "skipped");
 				continue;
 			}
@@ -391,7 +392,8 @@ TEST comb_timing()
 				comb_outcome_free(&o);
 			}
 		}
-		printf("\n");
+		time_t cur_time = time(NULL);
+		printf("%30s", ctime(&cur_time));
 		comb_outcome_free(&reference);
 		fflush(stdout);
 	}
