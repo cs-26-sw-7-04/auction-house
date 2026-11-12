@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 BIDDER_LABEL = "auction/bidder"
 
 
-@plugins.deployers.register("log")
+@plugins.deployers.register("logging")
 class LoggingDeployer:
     """Deploys nothing; remembers what it was asked to. For development and tests."""
 

@@ -4,14 +4,14 @@ import uuid
 
 import pytest
 
-from auction_house.components.solver_c_vcg import DEFAULT_LIBRARY, CVcgSolver
+from auction_house.components.solver_c_vcg_old import DEFAULT_LIBRARY, OldCVcgSolver
 from auction_house.components.engines import PayAsBidEngine, VcgEngine
-from auction_house.components.solver_brute_force import SortedSolver
+from auction_house.components.solver_brute_force import BruteForceSolver
 from auction_house.domain import Bid, utcnow
 
 SOLVERS = [
-    pytest.param(SortedSolver, id="sorted"),
-    pytest.param(CVcgSolver, id="c", marks=pytest.mark.skipif(not DEFAULT_LIBRARY.exists(), reason="C library not built")),
+    pytest.param(BruteForceSolver, id="brute-force"),
+    pytest.param(OldCVcgSolver, id="c", marks=pytest.mark.skipif(not DEFAULT_LIBRARY.exists(), reason="C library not built")),
 ]
 
 

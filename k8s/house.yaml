@@ -116,10 +116,12 @@ spec:
                           memory: 512Mi
 ---
 apiVersion: v1
-kind: Service
+kind: ServiceAccount
 metadata:
     name: auction-house
     namespace: auction
+imagePullSecrets:
+    - name: harbor-pull
 spec:
     type: NodePort
     selector:

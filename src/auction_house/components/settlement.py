@@ -27,6 +27,20 @@ class AcceptAll:
         return True
 
 
+@plugins.verifiers.register("reject-all")
+class RejectAll:
+    def verify(self, task: Task, result_hash: str | None) -> bool:
+        """:3"""
+        return False
+
+
+@plugins.verifiers.register("accept-none-empty-results")
+class AcceptNoneEmptyResults:
+    def verify(self, task: Task, result_hash: str | None) -> bool:
+        """:3"""
+        return result_hash is not None
+
+
 @plugins.ledgers.register("logging")
 class LoggingLedger:
     """Reputation is logged, not stored or used."""
