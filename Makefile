@@ -59,27 +59,3 @@ deploy-status:        ## Show auction-house pods and service
 
 deploy-logs:          ## Follow the auction-house logs
 	kubectl -n $(NS) logs deploy/auction-house --tail=50 -f
-
-# Short aliases kept for compatibility with the previous Makefile.
-khelp: help
-kcheck: cluster-check
-kup: cluster-create
-kdown: cluster-delete
-krestart: cluster-restart
-kbuild: image-build
-kload: image-import
-kdeploy: deploy-up
-kstatus:              ## Show nodes, pods, services and ingress
-	kubectl get nodes
-	kubectl get pods -o wide
-	kubectl get svc,ingress
-klogs: deploy-logs
-
-up: deploy-up
-down: deploy-down
-restart: cluster-restart deploy-up
-build: image-build
-load: image-import
-deploy: deploy-up
-status: deploy-status
-logs: deploy-logs
