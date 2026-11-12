@@ -8,6 +8,8 @@ kind: ServiceAccount
 metadata:
     name: auction-house
     namespace: auction
+imagePullSecrets:
+    - name: harbor-pull
 ---
 # The house only creates Jobs. get/list/delete are for debugging and cleanup.
 apiVersion: rbac.authorization.k8s.io/v1
@@ -44,9 +46,9 @@ data:
     AH_BIDDING_WINDOW: "PT30S"
     AH_TICK: "PT1S"
     AH_MAX_ROUNDS: "3"
-    AH_SOLVER__NAME: "brute-force"
+    AH_SOLVER__NAME: "vcg_combinatorial"
     AH_ENGINE__NAME: "vcg"
-    AH_DEPLOYER__NAME: "kubernetes"
+    AH_DEPLOYER__NAME: "logging"
     AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true}'
 ---
 # Demo keys only. Replace them for anything that is not a local demo.
@@ -116,12 +118,10 @@ spec:
                           memory: 512Mi
 ---
 apiVersion: v1
-kind: ServiceAccount
+kind: Service
 metadata:
     name: auction-house
     namespace: auction
-imagePullSecrets:
-    - name: harbor-pull
 spec:
     type: NodePort
     selector:
