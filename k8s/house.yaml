@@ -49,7 +49,7 @@ data:
     AH_SOLVER__NAME: "vcg_combinatorial"
     AH_ENGINE__NAME: "vcg"
     AH_DEPLOYER__NAME: "logging"
-    AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true}'
+    # AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true}' # uncomment on "kubernetes" deployer
 ---
 # Demo keys only. Replace them for anything that is not a local demo.
 apiVersion: v1
