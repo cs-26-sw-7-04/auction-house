@@ -265,7 +265,7 @@ class AuctionHouse:
             auction_house.domain.Assignment(
                 auction_id=a.auction_id,
                 award=award,
-                tasks=tuple(self.c.tasks.get(t) for t in award.task_ids),
+                task_ids=award.task_ids,
             )
             for a in self.c.auctions.all() if a.outcome
             for award in a.outcome.awards if award.bidder_id == bidder_id

@@ -145,6 +145,22 @@ def test_each_task_goes_to_its_cheapest_bidder(house):
     assert house.get_task(t2.task_id, "s").bidder_id == "b"
 
 
+def test_assignments_include_won_task_ids(house):
+    task = house.submit_task("s", spec())
+    (auction,) = house.open_auctions()
+    house.submit_bid(
+        auction.auction_id,
+        "a",
+        BidRequest(bundles=({"tasks": {task.task_id}, "price": 10},)),
+    )
+    house.clock.advance(minutes=2)
+    house.clear(auction.auction_id)
+
+    [assignment] = house.assignments_of("a")
+
+    assert assignment.task_ids == (task.task_id,)
+
+
 def test_tasks_nobody_bid_on_are_requeued_while_the_others_run(house):
     t1, t2 = (house.submit_task("s", spec()) for _ in range(2))
     (auction,) = house.open_auctions()
