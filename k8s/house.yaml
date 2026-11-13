@@ -46,10 +46,23 @@ data:
     AH_BIDDING_WINDOW: "PT30S"
     AH_TICK: "PT1S"
     AH_MAX_ROUNDS: "3"
+    # AH_AUTO_RUN: "false" # require the operator to open and clear auctions manually
+    # AH_BIDDING_WINDOW: "PT1M" # ISO 8601 duration while an auction accepts bids
+    # AH_TICK: "PT5S" # how often the automatic auction loop runs
+    # AH_MAX_ROUNDS: "3" # attempts before an unallocated task is given up
+    # AH_GROUPER__NAME: "batch" # groups pending tasks into auctions
+    # AH_GROUPER__OPTIONS: '{"size": 32}' # maximum tasks in each auction
+    # AH_ELIGIBILITY__NAME: "all" # which bidders may bid on tasks
     AH_SOLVER__NAME: "vcg_combinatorial"
+    # AH_SOLVER__OPTIONS: '{}' # solver-specific keyword options
     AH_ENGINE__NAME: "vcg"
+    # AH_ENGINE__OPTIONS: '{}' # clearing-engine-specific keyword options
     AH_DEPLOYER__NAME: "logging"
-    # AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true}' # uncomment on "kubernetes" deployer
+    # AH_DEPLOYER__NAME: "kubernetes" # create one Kubernetes Job per won task
+    # AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true, "image_pull_policy": "IfNotPresent"}'
+    # AH_VERIFIER__NAME: "accept-none-empty-results" # result verification policy
+    # AH_LEDGER__NAME: "logging" # settlement ledger
+    # AH_NOTIFIER__NAME: "logging" # auction announcement backend
 ---
 # Demo keys only. Replace them for anything that is not a local demo.
 apiVersion: v1
