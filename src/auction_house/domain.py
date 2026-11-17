@@ -5,7 +5,7 @@ Nothing here knows about HTTP, Kubernetes or any particular solver.
 import datetime
 import enum
 import uuid
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
@@ -54,6 +54,7 @@ class TaskSpec(Model):
     resources: Resources = Resources()
     verification: Verification = Verification.NONE
     expected_result_hash: Sha256 | None = None
+    input: dict[str, Any] = Field(default_factory=dict, description="Arbitrary JSON input the task may read")
 
     @model_validator(mode="after")
     def _hash_needed_for_hash_verification(self):
