@@ -42,13 +42,10 @@ metadata:
     name: auction-house-config
     namespace: auction
 data:
-    AH_AUTO_RUN: "true"
-    AH_BIDDING_WINDOW: "PT30S"
-    AH_TICK: "PT1S"
     AH_MAX_ROUNDS: "3"
-    # AH_AUTO_RUN: "false" # require the operator to open and clear auctions manually
-    # AH_BIDDING_WINDOW: "PT1M" # ISO 8601 duration while an auction accepts bids
-    # AH_TICK: "PT5S" # how often the automatic auction loop runs
+    AH_AUTO_RUN: "true" # false: require the operator to open and clear auctions manually
+    AH_BIDDING_WINDOW: "PT1M" # ISO 8601 duration while an auction accepts bids
+    AH_TICK: "PT10S" # how often the automatic auction loop runs
     # AH_MAX_ROUNDS: "3" # attempts before an unallocated task is given up
     # AH_GROUPER__NAME: "batch" # groups pending tasks into auctions
     # AH_GROUPER__OPTIONS: '{"size": 32}' # maximum tasks in each auction
