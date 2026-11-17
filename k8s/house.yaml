@@ -97,6 +97,8 @@ spec:
             labels:
                 app: auction-house
         spec:
+            nodeSelector: # Run on the control-plane node
+                node-role.kubernetes.io/control-plane: "true"
             serviceAccountName: auction-house
             containers:
                 - name: house
