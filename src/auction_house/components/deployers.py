@@ -85,7 +85,7 @@ class KubernetesDeployer:
             },
             "spec": {
                 "backoffLimit": 0,
-                "ttlSecondsAfterFinished": 3600,
+                "ttlSecondsAfterFinished": 360, # 6 minutes
                 "activeDeadlineSeconds": max(1, int((spec.deadline - now).total_seconds())),
                 "template": {"spec": {**pod, "serviceAccountName": "bidder-worker"}},
             },
