@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from auction_house import plugins
-from auction_house.domain import Award, Task
+from auction_house.domain import Task
 
 log = logging.getLogger(__name__)
 
@@ -34,12 +34,15 @@ class KubernetesDeployer:
 
     def __init__(
         self, batch_api: Any, *, namespace: str = "auction", pin_to_node: bool = False,
-        image_pull_policy: str = "IfNotPresent",
+        image_pull_policy: str = "IfNotPresent", api_url: str = "http://auction-house:7777",
+        api_key_secret_prefix: str = "bidder-",
     ):
         self.batch_api = batch_api
         self.namespace = namespace
         self.pin_to_node = pin_to_node
         self.image_pull_policy = image_pull_policy
+        self.api_url = api_url.rstrip("/")
+        self.api_key_secret_prefix = api_key_secret_prefix
 
     def build_job(self, task: Task, bidder_id: str, now: datetime.datetime) -> dict[str, Any]:
         """The batch/v1 Job manifest for one task."""
@@ -47,13 +50,27 @@ class KubernetesDeployer:
         limits: dict[str, str] = {"cpu": f"{res.cpu_millis}m", "memory": f"{res.memory_mb}Mi"}
         if res.gpu:
             limits["nvidia.com/gpu"] = "1"
+        task_id = str(task.task_id)
         pod: dict[str, Any] = {
             "restartPolicy": "Never",
             "containers": [{
                 "name": "task",
                 "image": spec.image,
                 "imagePullPolicy": self.image_pull_policy,
-                "env": [{"name": "TASK_ID", "value": str(task.task_id)}],
+                "env": [
+                    {"name": "TASK_ID", "value": task_id},
+                    {"name": "JOB_URL", "value": f"{self.api_url}/assignments/{task_id}/input"},
+                    {"name": "RESULT_ENDPOINT", "value": f"{self.api_url}/assignments/{task_id}/result"},
+                    {
+                        "name": "AUCTION_API_KEY",
+                        "valueFrom": {
+                            "secretKeyRef": {
+                                "name": f"{self.api_key_secret_prefix}{bidder_id}",
+                                "key": "AH_API_KEY",
+                            },
+                        },
+                    },
+                ],
                 "resources": {"requests": limits, "limits": limits},
             }],
         }
@@ -70,7 +87,7 @@ class KubernetesDeployer:
                 "backoffLimit": 0,
                 "ttlSecondsAfterFinished": 3600,
                 "activeDeadlineSeconds": max(1, int((spec.deadline - now).total_seconds())),
-                "template": {"spec": pod},
+                "template": {"spec": {**pod, "serviceAccountName": "bidder-worker"}},
             },
         }
 
@@ -84,7 +101,8 @@ class KubernetesDeployer:
 @plugins.deployers.register("kubernetes")
 def kubernetes_deployer(
     kubeconfig: str | None = None, namespace: str = "auction", pin_to_node: bool = False,
-    image_pull_policy: str = "IfNotPresent",
+    image_pull_policy: str = "IfNotPresent", api_url: str = "http://auction-house:7777",
+    api_key_secret_prefix: str = "bidder-",
 ) -> KubernetesDeployer:
     """Uses `kubeconfig`, else `$KUBECONFIG`, else `~/.kube/config` if present
     (local k3s), else the in-cluster service account."""
@@ -98,4 +116,5 @@ def kubernetes_deployer(
         api = client.BatchV1Api()
     return KubernetesDeployer(
         api, namespace=namespace, pin_to_node=pin_to_node, image_pull_policy=image_pull_policy,
+        api_url=api_url, api_key_secret_prefix=api_key_secret_prefix,
     )

@@ -272,6 +272,15 @@ class AuctionHouse:
         ]
 
 
+    def task_input(self, bidder_id: str, task_id: uuid.UUID) -> dict:
+        """Return the private input for a task's winning bidder."""
+        with self._lock:
+            task = self.c.tasks.get(task_id)
+            if task.bidder_id != bidder_id or task.status is not auction_house.domain.TaskStatus.EXECUTING:
+                raise auction_house.domain.NotAssigned(f"task {task_id} is not executing for {bidder_id}")
+            return {"task_id": str(task.task_id), **task.spec.input}
+
+
     def report_result(self, bidder_id: str, task_id: uuid.UUID, result_hash: str | None) -> auction_house.domain.Task:
         """Verify a result from the winner and settle the task."""
         with self._lock:

@@ -1,6 +1,7 @@
 """The HTTP surface, one router per role."""
 import asyncio
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, Response, status
 from fastapi.responses import StreamingResponse
@@ -98,8 +99,15 @@ def my_assignments(bidder_id: Bidder, house: House) -> list[Assignment]:
     return house.assignments_of(bidder_id)
 
 
+@bidders.get("/assignments/{task_id}/input")
+def task_input(task_id: uuid.UUID, bidder_id: Bidder, house: House) -> dict[str, Any]:
+    """Return the private task input to the bidder currently executing it."""
+    return house.task_input(bidder_id, task_id)
+
+
 class ResultReport(BaseModel):
     result_hash: Sha256 | None = None
+    result: dict[str, Any] | None = None
 
 
 @bidders.post("/assignments/{task_id}/result")

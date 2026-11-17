@@ -11,6 +11,14 @@ metadata:
 imagePullSecrets:
     - name: harbor-pull
 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    name: bidder-worker
+    namespace: auction
+imagePullSecrets:
+    - name: harbor-pull
+---
 # The house only creates Jobs. get/list/delete are for debugging and cleanup.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -54,9 +62,9 @@ data:
     # AH_SOLVER__OPTIONS: '{}' # solver-specific keyword options
     AH_ENGINE__NAME: "vcg"
     # AH_ENGINE__OPTIONS: '{}' # clearing-engine-specific keyword options
-    AH_DEPLOYER__NAME: "logging"
-    # AH_DEPLOYER__NAME: "kubernetes" # create one Kubernetes Job per won task
-    # AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true, "image_pull_policy": "IfNotPresent"}'
+    # AH_DEPLOYER__NAME: "logging"
+    AH_DEPLOYER__NAME: "kubernetes" # create one Kubernetes Job per won task
+    AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true, "image_pull_policy": "IfNotPresent", "api_url": "http://auction-house.auction.svc.cluster.local:7777"}'
     # AH_VERIFIER__NAME: "accept-none-empty-results" # result verification policy
     # AH_LEDGER__NAME: "logging" # settlement ledger
     # AH_NOTIFIER__NAME: "logging" # auction announcement backend

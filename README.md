@@ -33,6 +33,17 @@ bootstrap.py     settings -> wired AuctionHouse
 api/             FastAPI: app factory, auth dependencies, routers
 ```
 
+## login to harbor
+
+First, login ot the habor account (see soduku repo):
+
+```
+kubectl -n auction create secret docker-registry harbor-pull \
+  --docker-server="harbor.DOMAIN.com" \
+  --docker-username="$HARBOR_USERNAME" \
+  --docker-password="$HARBOR_PASSWORD"
+```
+
 
 ## Build and check auctionhouse container
 
