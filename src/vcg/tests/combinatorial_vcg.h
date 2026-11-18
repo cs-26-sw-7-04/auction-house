@@ -368,7 +368,7 @@ TEST comb_timing()
 	fprintf(out, "%14s", ",timestamp");
 	fprintf(out, "\n");
 	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
-		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
+		size_t tasks = COMB_MAX_TASKS;
 		int bidders = (int) bids / 3;
 		comb_rng = 0xC0FFEE + bids;
 		comb_random_auction(&a, tasks, bids, bidders, 4);
@@ -416,7 +416,7 @@ TEST rand_comb_timing()
 	fprintf(out, "%14s", "timestamp");
 	fprintf(out, "\n");
 	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
-		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
+		size_t tasks = COMB_MAX_TASKS;
 		int bidders = (int) bids / 3;
 		comb_rng = rand() + bids;
 		comb_random_auction(&a, tasks, bids, bidders, 4);
@@ -463,7 +463,7 @@ TEST weird_seed_comb_timing()
 	fprintf(out, "%14s", "timestamp");
 	fprintf(out, "\n");
 	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
-		size_t tasks = bids / 2 < COMB_MAX_TASKS ? bids / 2 : COMB_MAX_TASKS;
+		size_t tasks = COMB_MAX_TASKS;
 		int bidders = (int) bids / 3;
 		comb_rng = 0xC100EE;
 		comb_random_auction(&a, tasks, bids, bidders, 4);
@@ -705,6 +705,93 @@ TEST compare_to_simple_known_VCG_solution_4()
 			if (o.awards[i].bidder == 2 && o.awards[i].task == 0) continue;
 			if (o.awards[i].bidder == 3 && o.awards[i].task == 1) continue;
 			if (o.awards[i].bidder == 4 && o.awards[i].task == 2) continue;
+			result = false;
+		}
+		
+
+	}
+	return result;
+}
+
+TEST compare_to_simple_known_VCG_solution_5()
+{
+	bool result = true;
+	int B1_1[] = {0};
+	int B1_2[] = {1};
+	int B1_3[] = {2};
+	int B1_4[] = {3};
+	int B1_5[] = {4};
+	
+	int B2_1[] = {0};
+	int B2_2[] = {1, 2};
+	int B2_3[] = {2};
+	int B2_4[] = {3};
+	int B2_5[] = {4};
+
+	int B3_1[] = {0};
+	int B3_2[] = {1};
+	int B3_3[] = {2};
+	int B3_4[] = {3, 4};
+
+	int B4_1[] = {0};
+	int B4_2[] = {1};
+	int B4_3[] = {2};
+	int B4_4[] = {3};
+	int B4_5[] = {4};
+
+	int B5_1[] = {0};
+	int B5_2[] = {1};
+	int B5_3[] = {2};
+	int B5_4[] = {3};
+	int B5_5[] = {4};
+
+	int64_t values[] = {1000,1000,1000,1000,1000};
+	comb_bid bids[] = {
+		{B1_1, 1, 0, 2},
+		{B1_2, 1, 0, 8},
+		{B1_3, 1, 0, 9},
+		{B1_4, 1, 0, 3},
+		{B1_5, 1, 0, 6},
+		
+		{B2_1, 2, 1, 9},
+		{B2_2, 2, 1, 7},
+		{B2_3, 2, 1, 20},
+		{B2_4, 2, 1, 18},
+		{B2_5, 2, 1, 3},
+		
+		{B3_1, 2, 2, 3},
+		{B3_2, 2, 2, 7},
+		{B3_3, 2, 2, 9},
+		{B3_4, 2, 2, 8},
+
+		{B4_1, 1, 3, 3},
+		{B4_2, 1, 3, 6},
+		{B4_3, 1, 3, 8},
+		{B4_4, 1, 3, 7},
+		{B4_5, 1, 3, 5},
+
+		{B5_1, 1, 4, 3},
+		{B5_2, 1, 4, 7},
+		{B5_3, 1, 4, 9},
+		{B5_4, 1, 4, 8},
+		{B5_5, 1, 4, 6},
+	};
+	for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
+		comb_outcome o = vcg_comb_clear(values, sizeof(values)/sizeof(int64_t), bids, sizeof(bids)/sizeof(comb_bid), (comb_solver) s);
+		comb_print_outcome(comb_solver_name((comb_solver) s), o);
+		if (!o.ok) result = false;
+		if (o.award_count != 5) {
+			printf("comb_solver: %d tasks awarded count did not match expectation of 3 was %ld\n", s, o.award_count);
+			printf("unallocated count %ld\n", o.unallocated_count);
+			result = false;
+		}
+		int lim = 0 + o.award_count;
+		for (int i = 0; i < lim; i++){
+			if (o.awards[i].bidder == 0 && o.awards[i].task == 3) continue;
+			if (o.awards[i].bidder == 1 && o.awards[i].task == 4) continue;
+			if (o.awards[i].bidder == 1 && o.awards[i].task == 0) continue;
+			if (o.awards[i].bidder == 2 && o.awards[i].task == 1) continue;
+			if (o.awards[i].bidder == 2 && o.awards[i].task == 2) continue;
 			result = false;
 		}
 		
