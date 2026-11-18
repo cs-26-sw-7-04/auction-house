@@ -26,7 +26,7 @@ def _clear(
             task_ids=tuple(sorted(bundle.tasks)),
             payment=payment,
         ))
-        
+
     allocated = {t for bundle in best.winners.values() for t in bundle.tasks}
     return Outcome(
         awards=tuple(sorted(awards, key=lambda a: a.bidder_id)),

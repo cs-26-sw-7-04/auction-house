@@ -79,11 +79,34 @@ type: Opaque
 stringData:
     AH_API_KEYS: >-
         {
-        "op-key":    {"role": "operator",  "id": "ops"},
-        "sub-key":   {"role": "submitter", "id": "submitter1"},
-        "alice-key": {"role": "bidder",    "id": "alice"},
-        "bob-key":   {"role": "bidder",    "id": "bob"},
-        "carol-key": {"role": "bidder",    "id": "carol"}
+        "op-key":       {"role": "operator",  "id": "ops"},
+        "sub-key":      {"role": "submitter", "id": "submitter1"},
+        "alice-key":    {"role": "bidder",    "id": "alice"},
+        "bob-key":      {"role": "bidder",    "id": "bob"},
+        "carol-key":    {"role": "bidder",    "id": "carol"},
+        "dave-key":     {"role": "bidder",    "id": "dave"},
+        "eli-key":      {"role": "bidder",    "id": "eli"},
+        "frank-key":    {"role": "bidder",    "id": "frank"},
+        "grace-key":    {"role": "bidder",    "id": "grace"},
+        "henrik-key":   {"role": "bidder",    "id": "henrik"},
+        "irmgard-key":  {"role": "bidder",    "id": "irmgard"},
+        "jakob-key":    {"role": "bidder",    "id": "jakob"},
+        "katrine-key":  {"role": "bidder",    "id": "katrine"},
+        "lars-key":     {"role": "bidder",    "id": "lars"},
+        "michelle-key": {"role": "bidder",    "id": "michelle"},
+        "nils-key":     {"role": "bidder",    "id": "nils"},
+        "ophilia-key":  {"role": "bidder",    "id": "ophilia"},
+        "peter-key":    {"role": "bidder",    "id": "peter"},
+        "quinn-key":    {"role": "bidder",    "id": "quinn"},
+        "ronald-key":   {"role": "bidder",    "id": "ronald"},
+        "sarah-key":    {"role": "bidder",    "id": "sarah"},
+        "tobias-key":   {"role": "bidder",    "id": "tobias"},
+        "ursula-key":   {"role": "bidder",    "id": "ursula"},
+        "vickrey-key":  {"role": "bidder",    "id": "vickrey"},
+        "winona-key":   {"role": "bidder",    "id": "winona"},
+        "xander-key":   {"role": "bidder",    "id": "xander"},
+        "yvonne-key":   {"role": "bidder",    "id": "yvonne"},
+        "zack-key":     {"role": "bidder",    "id": "zack"}"
         }
 ---
 apiVersion: apps/v1
