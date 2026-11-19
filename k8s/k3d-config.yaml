@@ -4,7 +4,7 @@ kind: Simple
 metadata:
     name: auction
 servers: 1
-agents: 3
+agents: 26
 ports:
     - port: 7777:30777
       nodeFilters:
