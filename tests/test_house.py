@@ -55,7 +55,7 @@ def house():
     settings = Settings(
         _env_file=None,
         grouper=ComponentSpec(name="batch", options={"size": 2}),
-        solver=ComponentSpec(name="brute-force"),
+        solver=ComponentSpec(name="vcg_combinatorial", options={"algorithm": "2"}), # COMB_FAST_PIVOTS
         verifier=ComponentSpec(name="method"),
     )
     house = build_house(settings)

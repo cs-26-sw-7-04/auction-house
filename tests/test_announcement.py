@@ -20,7 +20,7 @@ def house():
     settings = Settings(
         _env_file=None,
         grouper=ComponentSpec(name="batch", options={"size": 1}),
-        solver=ComponentSpec(name="brute-force"),
+        solver=ComponentSpec(name="vcg_combinatorial", options={"algorithm": "2"}), # COMB_FAST_PIVOTS
         notifier=ComponentSpec(name="broadcast", options={"queue_size": 1}),
     )
     return build_house(settings)

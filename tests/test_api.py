@@ -25,7 +25,7 @@ def client():
         _env_file=None,
         api_keys=KEYS,
         grouper=ComponentSpec(name="batch", options={"size": 8}),
-        solver=ComponentSpec(name="brute-force"),
+        solver=ComponentSpec(name="vcg_combinatorial", options={"algorithm": "2"}), # COMB_FAST_PIVOTS
         verifier=ComponentSpec(name="method"),
     )
     with TestClient(create_app(settings)) as client:
