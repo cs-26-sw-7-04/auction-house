@@ -59,7 +59,7 @@ data:
     AH_GROUPER__OPTIONS: '{"size": 64}' # maximum tasks in each auction
     # AH_ELIGIBILITY__NAME: "all" # which bidders may bid on tasks
     AH_SOLVER__NAME: "vcg_combinatorial"
-    # AH_SOLVER__OPTIONS: '{}' # solver-specific keyword options
+    AH_SOLVER__OPTIONS: '{"algorithm": 1}' # vcg_combinatorial: 1 = branch and bound; the default 0 is a brute force that stalls on larger auctions
     AH_ENGINE__NAME: "vcg"
     # AH_ENGINE__OPTIONS: '{}' # clearing-engine-specific keyword options
     # AH_DEPLOYER__NAME: "logging"
