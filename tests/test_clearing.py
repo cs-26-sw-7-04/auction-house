@@ -9,7 +9,6 @@ import uuid
 import pytest
 
 from auction_house.components.engines import PayAsBidEngine, VcgEngine
-from auction_house.components.solver_brute_force import BruteForceSolver
 from auction_house.components.solver_per_task import PerTaskSolver
 from auction_house.components.solver_vcg_combinatorial import DEFAULT_LIBRARY, CVcgSolver
 from auction_house.domain import Bid, BundleBid, utcnow
@@ -19,8 +18,7 @@ C_LIBRARY = pytest.mark.skipif(not DEFAULT_LIBRARY.exists(), reason="C library n
 
 # The C library's algorithms: 0 brute force, 1 branch and bound, 2 fast pivots, 3 parallel pivots
 C_ALGORITHMS = [pytest.param(a, id=f"c-algorithm-{a}", marks=C_LIBRARY) for a in range(4)]
-EXACT = [pytest.param(BruteForceSolver, id="brute-force"),
-         *(pytest.param(lambda a=a: CVcgSolver(algorithm=a), id=f"c-algorithm-{a}", marks=C_LIBRARY) for a in range(4))]
+EXACT = [*(pytest.param(lambda a=a: CVcgSolver(algorithm=a), id=f"c-algorithm-{a}", marks=C_LIBRARY) for a in range(4))]
 
 
 def bid(bidder: str, *bundles) -> Bid:
@@ -106,7 +104,7 @@ def test_per_task_ignores_bundles_of_several_tasks():
 @pytest.mark.parametrize("algorithm", C_ALGORITHMS)
 def test_every_c_algorithm_agrees_with_brute_force_on_welfare_and_payments(algorithm):
     rng = random.Random(11)
-    reference = VcgEngine(BruteForceSolver())
+    reference = VcgEngine(CVcgSolver(algorithm=0))  # brute force
     engine = VcgEngine(CVcgSolver(algorithm=algorithm))
     for _ in range(60):
         vs, bids = random_auction(rng)
@@ -178,7 +176,7 @@ def test_pay_as_bid_pays_the_ask(solver):
 
 def test_truthful_bidding_is_never_worse_under_vcg():
     rng = random.Random(7)
-    engine = VcgEngine(BruteForceSolver())
+    engine = VcgEngine(CVcgSolver(algorithm=0))  # brute force
     for _ in range(100):
         vs = values(*(rng.randint(1, 100) for _ in range(rng.randint(2, 5))))
         tasks = list(vs)
