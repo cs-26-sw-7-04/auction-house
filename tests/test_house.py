@@ -9,8 +9,10 @@ from auction_house.config import Settings
 from auction_house.domain import (
     AuctionClosed,
     BidRequest,
+    BundleBid,
     IneligibleBid,
-    InvalidBid,
+    InvalidBundle,
+    Nobid,
     InvalidTask,
     NotAssigned,
     SolverError,
@@ -37,15 +39,25 @@ def spec(budget: int = 100, **kw) -> TaskSpec:
     return TaskSpec(image="registry/job:1", deadline=utcnow() + datetime.timedelta(hours=1), max_budget=budget, **kw)
 
 
-def place(house, auction, bidder: str, prices: dict) -> None:
-    """Bid `bidder` places on each task in {task_id: price}."""
-    for task_id, price in prices.items():
-        house.submit_bid(auction.auction_id, task_id, bidder, BidRequest(price=price))
+def place(house, auction, bidder: str, *bundles) -> None:
+    """Place a bid of `bidder`; each bundle is (task_ids, price)."""
+    request = BidRequest(bundles=tuple(BundleBid(tasks=frozenset(tasks), price=price) for tasks, price in bundles))
+    house.submit_bid(auction.auction_id, bidder, request)
+
+
+def singles(prices: dict) -> list:
+    """Bundles of one task each, from {task_id: price}."""
+    return [([task_id], price) for task_id, price in prices.items()]
 
 
 @pytest.fixture
 def house():
-    settings = Settings(_env_file=None, bundler=ComponentSpec(name="batch", options={"size": 2}))
+    settings = Settings(
+        _env_file=None,
+        grouper=ComponentSpec(name="batch", options={"size": 2}),
+        solver=ComponentSpec(name="brute-force"),
+        verifier=ComponentSpec(name="method"),
+    )
     house = build_house(settings)
     house.clock = Clock()
     return house
@@ -53,33 +65,34 @@ def house():
 
 # --- bidding ----------------------------------------------------------------------
 
-def test_a_bidder_can_bid_on_several_tasks_and_rebidding_replaces_only_that_task(house):
+def test_rebidding_replaces_the_whole_earlier_bid(house):
     t1, t2 = (house.submit_task("s", spec()) for _ in range(2))
     (auction,) = house.open_auctions()
-    place(house, auction, "a", {t1.task_id: 20, t2.task_id: 20})
-    place(house, auction, "a", {t1.task_id: 5})
-    prices = {b.task_id: b.price for b in house.own_bids(auction.auction_id, "a")}
-    assert prices == {t1.task_id: 5, t2.task_id: 20}
+    place(house, auction, "a", ([t1.task_id], 20), ([t2.task_id], 20))
+    place(house, auction, "a", ([t1.task_id], 5))
+    bid = house.own_bid(auction.auction_id, "a")
+    assert [(set(b.tasks), b.price) for b in bid.bundles] == [({t1.task_id}, 5)]
 
 
-def test_own_bids_are_only_the_callers(house):
+def test_own_bid_is_only_the_callers(house):
     task = house.submit_task("s", spec())
     (auction,) = house.open_auctions()
-    place(house, auction, "a", {task.task_id: 10})
-    place(house, auction, "b", {task.task_id: 20})
-    assert [b.bidder_id for b in house.own_bids(auction.auction_id, "a")] == ["a"]
-    assert house.own_bids(auction.auction_id, "nobody") == []
+    place(house, auction, "a", ([task.task_id], 10))
+    place(house, auction, "b", ([task.task_id], 20))
+    assert house.own_bid(auction.auction_id, "a").bidder_id == "a"
+    with pytest.raises(Nobid):
+        house.own_bid(auction.auction_id, "nobody")
 
 
 def test_a_bid_on_a_task_outside_the_auction_is_rejected(house):
     for _ in range(3):
         house.submit_task("s", spec())
     first, second = house.open_auctions()
-    with pytest.raises(InvalidBid):
-        house.submit_bid(first.auction_id, second.task_ids[0], "a", BidRequest(price=1))
+    with pytest.raises(InvalidBundle):
+        place(house, first, "a", ([second.task_ids[0]], 1))
 
 
-def test_ineligibility_is_per_task(house):
+def test_ineligibility_rejects_the_whole_bid(house):
     t1, t2 = (house.submit_task("s", spec()) for _ in range(2))
 
     class NotForFirstTask:
@@ -89,8 +102,8 @@ def test_ineligibility_is_per_task(house):
     house.c = replace(house.c, eligibility=NotForFirstTask())
     (auction,) = house.open_auctions()
     with pytest.raises(IneligibleBid):
-        house.submit_bid(auction.auction_id, t1.task_id, "a", BidRequest(price=1))
-    house.submit_bid(auction.auction_id, t2.task_id, "a", BidRequest(price=1))
+        place(house, auction, "a", ([t1.task_id], 1), ([t2.task_id], 1))
+    place(house, auction, "a", ([t2.task_id], 1))
 
 
 def test_a_closed_auction_refuses_bids(house):
@@ -98,14 +111,14 @@ def test_a_closed_auction_refuses_bids(house):
     (auction,) = house.open_auctions()
     house.clock.advance(minutes=2)
     with pytest.raises(AuctionClosed):
-        house.submit_bid(auction.auction_id, task.task_id, "a", BidRequest(price=1))
+        place(house, auction, "a", ([task.task_id], 1))
 
 
 def test_a_bid_above_the_budget_is_accepted_but_cannot_win(house):
     task = house.submit_task("s", spec(50))
     (auction,) = house.open_auctions()
     # Accepted without error: rejecting it would reveal the budget to bidders.
-    house.submit_bid(auction.auction_id, task.task_id, "a", BidRequest(price=80))
+    place(house, auction, "a", ([task.task_id], 80))
     house.clock.advance(minutes=2)
     house.clear(auction.auction_id)
     assert house.get_task(task.task_id, "s").status is TaskStatus.PENDING
@@ -120,7 +133,7 @@ def test_full_round(house):
     for task_id in first.task_ids:
         assert house.get_task(task_id, "s").status is TaskStatus.IN_AUCTION
 
-    place(house, first, "a", {task_id: 10 for task_id in first.task_ids})
+    place(house, first, "a", (list(first.task_ids), 10))
     with pytest.raises(AuctionClosed):
         house.clear(first.auction_id)  # window still open
 
@@ -130,15 +143,15 @@ def test_full_round(house):
     for task_id in first.task_ids:
         task = house.get_task(task_id, "s")
         assert (task.status, task.bidder_id) == (TaskStatus.EXECUTING, "a")
-    assert {a.task.task_id for a in house.assignments_of("a")} == set(first.task_ids)
+    assert {t for a in house.assignments_of("a") for t in a.task_ids} == set(first.task_ids)
     assert house.assignments_of("b") == []
 
 
 def test_each_task_goes_to_its_cheapest_bidder(house):
     t1, t2 = (house.submit_task("s", spec()) for _ in range(2))
     (auction,) = house.open_auctions()
-    place(house, auction, "a", {t1.task_id: 10, t2.task_id: 50})
-    place(house, auction, "b", {t1.task_id: 40, t2.task_id: 20})
+    place(house, auction, "a", *singles({t1.task_id: 10, t2.task_id: 50}))
+    place(house, auction, "b", *singles({t1.task_id: 40, t2.task_id: 20}))
     house.clock.advance(minutes=2)
     house.clear(auction.auction_id)
     assert house.get_task(t1.task_id, "s").bidder_id == "a"
@@ -148,11 +161,7 @@ def test_each_task_goes_to_its_cheapest_bidder(house):
 def test_assignments_include_won_task_ids(house):
     task = house.submit_task("s", spec())
     (auction,) = house.open_auctions()
-    house.submit_bid(
-        auction.auction_id,
-        "a",
-        BidRequest(bundles=({"tasks": {task.task_id}, "price": 10},)),
-    )
+    place(house, auction, "a", ([task.task_id], 10))
     house.clock.advance(minutes=2)
     house.clear(auction.auction_id)
 
@@ -164,7 +173,7 @@ def test_assignments_include_won_task_ids(house):
 def test_tasks_nobody_bid_on_are_requeued_while_the_others_run(house):
     t1, t2 = (house.submit_task("s", spec()) for _ in range(2))
     (auction,) = house.open_auctions()
-    place(house, auction, "a", {t1.task_id: 10})
+    place(house, auction, "a", ([t1.task_id], 10))
     house.clock.advance(minutes=2)
     house.clear(auction.auction_id)
     assert house.get_task(t1.task_id, "s").status is TaskStatus.EXECUTING
@@ -221,7 +230,7 @@ def test_results_are_verified_and_only_taken_from_the_winner(house):
     good = "a" * 64
     task = house.submit_task("s", spec(verification="hash", expected_result_hash=good))
     (auction,) = house.open_auctions()
-    place(house, auction, "a", {task.task_id: 1})
+    place(house, auction, "a", ([task.task_id], 1))
     house.clock.advance(minutes=2)
     house.clear(auction.auction_id)
 
@@ -230,3 +239,18 @@ def test_results_are_verified_and_only_taken_from_the_winner(house):
     assert house.report_result("a", task.task_id, "b" * 64).status is TaskStatus.FAILED
     with pytest.raises(NotAssigned):
         house.report_result("a", task.task_id, good)
+
+
+# --- operator views ---------------------------------------------------------------
+
+def test_the_operator_can_list_every_auction_and_task(house):
+    for _ in range(3):
+        house.submit_task("s", spec())
+    assert len(house.all_tasks()) == 3
+    assert house.all_auctions() == []
+    first, second = house.open_auctions()
+    house.clock.advance(minutes=2)
+    house.clear(first.auction_id)
+    auctions = house.all_auctions()
+    assert {a.auction_id for a in auctions} == {first.auction_id, second.auction_id}
+    assert [a.outcome is not None for a in auctions if a.auction_id == first.auction_id] == [True]
