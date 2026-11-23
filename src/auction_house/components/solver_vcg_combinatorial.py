@@ -69,7 +69,7 @@ class CVcgSolver:
                 ctypes.cast(array, ctypes.POINTER(ctypes.c_int)), len(indices), bidder_number[bidder_id], bundle.price,
             )
 
-        result = lib.vcglib.vcg_comb_clear(c_values, len(tasks), c_bids, len(offers), self.algorithm)
+        result = lib.vcglib.vcg_comb_clear(c_values, len(tasks), c_bids, len(offers), int(self.algorithm))
         try:
             if not result.ok:
                 raise SolverError("the C solver failed")
