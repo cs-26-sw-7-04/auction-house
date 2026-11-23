@@ -9,7 +9,7 @@ from auction_house.domain import Task
 class BatchGrouper:
     """Oldest first, at most `size` tasks per auction."""
 
-    def __init__(self, size: int = 32): # TODO: make this configurable
+    def __init__(self, size: int = 64):
         if size < 1:
             raise ValueError("size must be at least 1")
         self.size = size
