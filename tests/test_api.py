@@ -111,3 +111,6 @@ def test_the_operator_can_export_every_task_and_auction(client):
     client.post(f"/operator/auctions/{auction_id}/clear?force=true", headers=OP)
     (auction,) = client.get("/operator/auctions", headers=OP).json()
     assert auction["outcome"]["awards"][0]["bidder_id"] == "alice"
+    (bid,) = client.get(f"/operator/auctions/{auction_id}/bids", headers=OP).json()
+    assert (bid["bidder_id"], bid["bundles"][0]["price"]) == ("alice", 10)
+    assert client.get(f"/operator/auctions/{auction_id}/bids", headers=ALICE).status_code == 403

@@ -141,6 +141,12 @@ def inspect_auction(auction_id: uuid.UUID, house: House) -> Auction:
     return house.get_auction(auction_id)
 
 
+@operators.get("/auctions/{auction_id}/bids")
+def auction_bids(auction_id: uuid.UUID, house: House) -> list[Bid]:
+    """Every sealed bid placed in the auction, e.g. to export an experiment."""
+    return house.bids_in(auction_id)
+
+
 @operators.post("/auctions/{auction_id}/clear")
 def clear_auction(auction_id: uuid.UUID, house: House, force: bool = False) -> Auction:
     """Clear an auction. `force` clears before the bidding window has ended."""

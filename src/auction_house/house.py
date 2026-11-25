@@ -264,6 +264,12 @@ class AuctionHouse:
         return self.c.auctions.all()
 
 
+    def bids_in(self, auction_id: uuid.UUID) -> list[auction_house.domain.Bid]:
+        """Every sealed bid placed in the auction. For operators, e.g. to check an experiment's bidder logs."""
+        self.c.auctions.get(auction_id)  # raises UnknownAuction
+        return self.c.bids.all(auction_id)
+
+
     def all_tasks(self) -> list[auction_house.domain.Task]:
         """Every task whatever its owner or status. For operators."""
         return self.c.tasks.list()
