@@ -1,4 +1,5 @@
-CFLAGS = -Wall -Werror -Wextra -std=c99 -pedantic 
+CFLAGS = -Wall -Werror -Wextra -std=c99 -pedantic -O3 -march=native -flto -ffast-math -fomit-frame-pointer
+
 CC = gcc
 TEST_DIR = ./tests
 BUILD_DIR = ./build

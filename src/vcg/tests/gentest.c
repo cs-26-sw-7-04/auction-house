@@ -74,7 +74,7 @@ bool generate_tests(char* input_file, char* test_dir)
 {
 	FILE* in = fopen(input_file, "r");
 	size_t bytes_read;
-	char* file_to_include;
+	char* file_to_include = NULL;
 	if (in == NULL)
 	{
 		perror("error opening file");
