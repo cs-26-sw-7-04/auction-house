@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../Bidder-Simulation"
+		},
+		{
+			"path": "../sudoku-solver"
+		}
+	],
+	"settings": {}
+}

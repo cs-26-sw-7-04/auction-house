@@ -1,0 +1,175 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: auction
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    name: auction-house
+    namespace: auction
+imagePullSecrets:
+    - name: harbor-pull
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+    name: bidder-worker
+    namespace: auction
+imagePullSecrets:
+    - name: harbor-pull
+---
+# The house only creates Jobs. get/list/delete are for debugging and cleanup.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+    name: auction-house-jobs
+    namespace: auction
+rules:
+    - apiGroups: ["batch"]
+      resources: ["jobs"]
+      verbs: ["create", "get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+    name: auction-house-jobs
+    namespace: auction
+subjects:
+    - kind: ServiceAccount
+      name: auction-house
+      namespace: auction
+roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: auction-house-jobs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: auction-house-config
+    namespace: auction
+data:
+    AH_MAX_ROUNDS: "3"
+    AH_AUTO_RUN: "true" # false: require the operator to open and clear auctions manually
+    AH_BIDDING_WINDOW: "PT1M" # ISO 8601 duration while an auction accepts bids
+    AH_TICK: "PT10S" # how often the automatic auction loop runs
+    # AH_MAX_ROUNDS: "3" # attempts before an unallocated task is given up
+    AH_GROUPER__NAME: "batch" # groups pending tasks into auctions
+    AH_GROUPER__OPTIONS: '{"size": 64}' # maximum tasks in each auction
+    # AH_ELIGIBILITY__NAME: "all" # which bidders may bid on tasks
+    AH_SOLVER__NAME: "vcg_combinatorial"
+    # AH_SOLVER__OPTIONS: '{}' # solver-specific keyword options
+    AH_ENGINE__NAME: "vcg"
+    # AH_ENGINE__OPTIONS: '{}' # clearing-engine-specific keyword options
+    # AH_DEPLOYER__NAME: "logging"
+    AH_DEPLOYER__NAME: "kubernetes" # create one Kubernetes Job per won task
+    AH_DEPLOYER__OPTIONS: '{"namespace": "auction", "pin_to_node": true, "image_pull_policy": "IfNotPresent", "api_url": "http://auction-house.auction.svc.cluster.local:7777"}'
+    # AH_VERIFIER__NAME: "accept-none-empty-results" # result verification policy
+    # AH_LEDGER__NAME: "logging" # settlement ledger
+    # AH_NOTIFIER__NAME: "logging" # auction announcement backend
+---
+# Demo keys only. Replace them for anything that is not a local demo.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: auction-house-keys
+    namespace: auction
+type: Opaque
+stringData:
+    AH_API_KEYS: >-
+        {
+        "op-key":       {"role": "operator",  "id": "ops"},
+        "sub-key":      {"role": "submitter", "id": "submitter1"},
+        "alice-key":    {"role": "bidder",    "id": "alice"},
+        "bob-key":      {"role": "bidder",    "id": "bob"},
+        "carol-key":    {"role": "bidder",    "id": "carol"},
+        "dave-key":     {"role": "bidder",    "id": "dave"},
+        "eli-key":      {"role": "bidder",    "id": "eli"},
+        "frank-key":    {"role": "bidder",    "id": "frank"},
+        "grace-key":    {"role": "bidder",    "id": "grace"},
+        "henrik-key":   {"role": "bidder",    "id": "henrik"},
+        "irmgard-key":  {"role": "bidder",    "id": "irmgard"},
+        "jakob-key":    {"role": "bidder",    "id": "jakob"},
+        "katrine-key":  {"role": "bidder",    "id": "katrine"},
+        "lars-key":     {"role": "bidder",    "id": "lars"},
+        "michelle-key": {"role": "bidder",    "id": "michelle"},
+        "nils-key":     {"role": "bidder",    "id": "nils"},
+        "ophilia-key":  {"role": "bidder",    "id": "ophilia"},
+        "peter-key":    {"role": "bidder",    "id": "peter"},
+        "quinn-key":    {"role": "bidder",    "id": "quinn"},
+        "ronald-key":   {"role": "bidder",    "id": "ronald"},
+        "sarah-key":    {"role": "bidder",    "id": "sarah"},
+        "tobias-key":   {"role": "bidder",    "id": "tobias"},
+        "ursula-key":   {"role": "bidder",    "id": "ursula"},
+        "vickrey-key":  {"role": "bidder",    "id": "vickrey"},
+        "winona-key":   {"role": "bidder",    "id": "winona"},
+        "xander-key":   {"role": "bidder",    "id": "xander"},
+        "yvonne-key":   {"role": "bidder",    "id": "yvonne"},
+        "zack-key":     {"role": "bidder",    "id": "zack"}
+        }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: auction-house
+    namespace: auction
+spec:
+    # State is in memory and the lock is per process: exactly one replica,
+    # and never two pods at once during a rollout.
+    replicas: 1
+    strategy:
+        type: Recreate
+    selector:
+        matchLabels:
+            app: auction-house
+    template:
+        metadata:
+            labels:
+                app: auction-house
+        spec:
+            nodeSelector: # Run on the control-plane node
+                node-role.kubernetes.io/control-plane: "true"
+            serviceAccountName: auction-house
+            containers:
+                - name: house
+                  image: auction-house:dev
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                      - containerPort: 7777
+                  envFrom:
+                      - configMapRef:
+                            name: auction-house-config
+                      - secretRef:
+                            name: auction-house-keys
+                  readinessProbe:
+                      httpGet:
+                          path: /health
+                          port: 7777
+                      periodSeconds: 5
+                  livenessProbe:
+                      httpGet:
+                          path: /health
+                          port: 7777
+                      initialDelaySeconds: 10
+                      periodSeconds: 10
+                  resources:
+                      requests:
+                          cpu: 100m
+                          memory: 128Mi
+                      limits:
+                          memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: auction-house
+    namespace: auction
+spec:
+    type: NodePort
+    selector:
+        app: auction-house
+    ports:
+        - port: 7777
+          targetPort: 7777
+          nodePort: 30777
