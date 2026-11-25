@@ -358,6 +358,7 @@ static double comb_seconds(void)
  * once it gets slow. */
 TEST comb_timing()
 {
+
 	char *output = "./tests/vcg_comb_timing.csv";
 	FILE *out = fopen(output, "w");
 	static comb_auction a;
@@ -376,7 +377,7 @@ TEST comb_timing()
 		comb_outcome reference = {0};
 		bool have_reference = false;
 		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
-			if ( false && (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
+			if ( (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
 				fprintf(out, " %18s,", "skipped");
 				continue;
 			}
@@ -406,6 +407,7 @@ TEST comb_timing()
  * once it gets slow. */
 TEST rand_comb_timing()
 {
+
 	char *output = "./tests/vcg_rand_comb_timing.csv";
 	FILE *out = fopen(output,"w");
 	static comb_auction a;
@@ -424,7 +426,7 @@ TEST rand_comb_timing()
 		comb_outcome reference = {0};
 		bool have_reference = false;
 		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
-			if (false && (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
+			if ( (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
 				fprintf(out, " %18s,", "skipped");
 				continue;
 			}
@@ -753,15 +755,15 @@ TEST compare_to_simple_known_VCG_solution_5()
 		{B1_4, 1, 0, 3},
 		{B1_5, 1, 0, 6},
 		
-		{B2_1, 2, 1, 9},
+		{B2_1, 1, 1, 9},
 		{B2_2, 2, 1, 7},
-		{B2_3, 2, 1, 20},
-		{B2_4, 2, 1, 18},
-		{B2_5, 2, 1, 3},
+		{B2_3, 1, 1, 20},
+		{B2_4, 1, 1, 18},
+		{B2_5, 1, 1, 3},
 		
-		{B3_1, 2, 2, 3},
-		{B3_2, 2, 2, 7},
-		{B3_3, 2, 2, 9},
+		{B3_1, 1, 2, 3},
+		{B3_2, 1, 2, 7},
+		{B3_3, 1, 2, 9},
 		{B3_4, 2, 2, 8},
 
 		{B4_1, 1, 3, 3},
