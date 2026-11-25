@@ -259,6 +259,16 @@ class AuctionHouse:
                            closes_at=auction.closes_at, tasks=offers)
 
 
+    def all_auctions(self) -> list[auction_house.domain.Auction]:
+        """Every auction with its outcome. For operators, e.g. to export an experiment."""
+        return self.c.auctions.all()
+
+
+    def all_tasks(self) -> list[auction_house.domain.Task]:
+        """Every task whatever its owner or status. For operators."""
+        return self.c.tasks.list()
+
+
     def assignments_of(self, bidder_id: str) -> list[auction_house.domain.Assignment]:
         """Every task the bidder has won, across all cleared auctions."""
         return [

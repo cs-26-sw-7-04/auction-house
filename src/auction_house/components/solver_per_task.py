@@ -1,0 +1,39 @@
+"""Baseline solver: every task is its own independent auction.
+
+Only single-task bundles count. Each task goes to the bidder with the cheapest ask below the task's value, so a
+bidder can win several tasks, and costs are assumed to add up. Under the `vcg` engine each task is then paid its
+second-lowest ask, a plain Vickrey auction per task. It is what the combinatorial solver is compared against.
+"""
+import uuid
+from collections.abc import Mapping, Sequence
+
+from auction_house import plugins
+from auction_house.domain import Bid, BundleBid, Selection
+
+
+@plugins.solvers.register("per-task")
+class PerTaskSolver:
+    def solve(self, values: Mapping[uuid.UUID, int], bids: Sequence[Bid], *, exclude: str | None = None) -> Selection:
+        """The cheapest single-task ask per task. Ties go to the lowest bidder id."""
+        cheapest: dict[uuid.UUID, tuple[int, str]] = {}
+        for bid in sorted(bids, key=lambda b: b.bidder_id):
+            if bid.bidder_id == exclude:
+                continue
+            for bundle in bid.bundles:
+                if len(bundle.tasks) != 1:
+                    continue
+                (task,) = bundle.tasks
+                if task not in values or bundle.price >= values[task]:
+                    continue
+                if task not in cheapest or bundle.price < cheapest[task][0]:
+                    cheapest[task] = (bundle.price, bid.bidder_id)
+
+        won: dict[str, dict[uuid.UUID, int]] = {}
+        for task, (price, bidder_id) in cheapest.items():
+            won.setdefault(bidder_id, {})[task] = price
+        winners = {
+            bidder_id: BundleBid(tasks=frozenset(tasks), price=sum(tasks.values()))
+            for bidder_id, tasks in sorted(won.items())
+        }
+        welfare = sum(values[task] - price for tasks in won.values() for task, price in tasks.items())
+        return Selection(winners=winners, welfare=welfare)

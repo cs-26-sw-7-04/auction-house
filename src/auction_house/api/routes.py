@@ -123,6 +123,18 @@ def open_auctions(house: House) -> list[Auction]:
     return house.open_auctions()
 
 
+@operators.get("/auctions")
+def all_auctions(house: House) -> list[Auction]:
+    """Every auction with its outcome."""
+    return house.all_auctions()
+
+
+@operators.get("/tasks")
+def all_tasks(house: House) -> list[Task]:
+    """Every task of every submitter, with status, winner and budget."""
+    return house.all_tasks()
+
+
 @operators.get("/auctions/{auction_id}")
 def inspect_auction(auction_id: uuid.UUID, house: House) -> Auction:
     """Everything about an auction, including its outcome."""

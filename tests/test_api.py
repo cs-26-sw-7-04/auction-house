@@ -21,7 +21,13 @@ SUB, SUB2, ALICE, BOB, OP = ({"X-API-Key": k} for k in KEYS)
 
 @pytest.fixture
 def client():
-    settings = Settings(_env_file=None, api_keys=KEYS, bundler=ComponentSpec(name="batch", options={"size": 8}))
+    settings = Settings(
+        _env_file=None,
+        api_keys=KEYS,
+        grouper=ComponentSpec(name="batch", options={"size": 8}),
+        solver=ComponentSpec(name="vcg_combinatorial", options={"algorithm": "2"}), # COMB_FAST_PIVOTS
+        verifier=ComponentSpec(name="method"),
+    )
     with TestClient(create_app(settings)) as client:
         yield client
 
@@ -33,8 +39,12 @@ def submit(client, budget=100) -> str:
     return response.json()["task_id"]
 
 
-def bid_url(auction_id: str, task_id: str) -> str:
-    return f"/auctions/{auction_id}/tasks/{task_id}/bid"
+def bid_url(auction_id: str) -> str:
+    return f"/auctions/{auction_id}/bid"
+
+
+def bundles(task_id: str, price: int) -> dict:
+    return {"bundles": [{"tasks": [task_id], "price": price}]}
 
 
 def test_whole_flow_and_sealing(client):
@@ -47,17 +57,18 @@ def test_whole_flow_and_sealing(client):
     assert [t["task_id"] for t in public["tasks"]] == [task_id]
     assert "max_budget" not in str(public) and "demo:1" not in str(public) and "outcome" not in public
 
-    assert client.put(bid_url(auction_id, task_id), json={"price": 10}, headers=ALICE).status_code == 204
-    assert client.put(bid_url(auction_id, task_id), json={"price": 30}, headers=BOB).status_code == 204
-    assert [b["price"] for b in client.get(f"/auctions/{auction_id}/bids", headers=ALICE).json()] == [10]
-    assert [b["price"] for b in client.get(f"/auctions/{auction_id}/bids", headers=BOB).json()] == [30]
+    assert client.put(bid_url(auction_id), json=bundles(task_id, 10), headers=ALICE).status_code == 204
+    assert client.put(bid_url(auction_id), json=bundles(task_id, 30), headers=BOB).status_code == 204
+    assert client.get(bid_url(auction_id), headers=ALICE).json()["bundles"][0]["price"] == 10
+    assert client.get(bid_url(auction_id), headers=BOB).json()["bundles"][0]["price"] == 30
 
     cleared = client.post(f"/operator/auctions/{auction_id}/clear?force=true", headers=OP).json()
     assert [(a["bidder_id"], a["payment"]) for a in cleared["outcome"]["awards"]] == [("alice", 30)]
 
     assert client.get("/assignments", headers=BOB).json() == []
     (mine,) = client.get("/assignments", headers=ALICE).json()
-    assert mine["task"]["spec"]["image"] == "demo:1"
+    assert mine["task_ids"] == [task_id]
+    assert mine["award"]["payment"] == 30
 
     assert client.get(f"/tasks/{task_id}", headers=SUB).json()["status"] == "executing"
     assert client.post(f"/assignments/{task_id}/result", json={}, headers=ALICE).json()["status"] == "completed"
@@ -67,7 +78,7 @@ def test_whole_flow_and_sealing(client):
 def test_roles_and_ownership_are_enforced(client):
     task_id = submit(client)
     auction_id = client.post("/operator/auctions", headers=OP).json()[0]["auction_id"]
-    url, bid = bid_url(auction_id, task_id), {"price": 1}
+    url, bid = bid_url(auction_id), bundles(task_id, 1)
 
     assert client.put(url, json=bid).status_code == 401
     assert client.put(url, json=bid, headers={"X-API-Key": "nope"}).status_code == 401
@@ -75,7 +86,9 @@ def test_roles_and_ownership_are_enforced(client):
     assert client.post("/operator/auctions", headers=ALICE).status_code == 403
     assert client.get(f"/operator/auctions/{auction_id}", headers=ALICE).status_code == 403
     assert client.get(f"/tasks/{task_id}", headers=SUB2).status_code == 404
-    assert client.get(f"/auctions/{auction_id}/bids", headers=ALICE).json() == []  # no bids yet
+    assert client.get(url, headers=ALICE).status_code == 404  # no bid yet
+    assert client.get("/operator/tasks", headers=ALICE).status_code == 403
+    assert client.get("/operator/auctions", headers=SUB).status_code == 403
 
 
 def test_rule_violations_map_to_http_codes(client):
@@ -85,5 +98,16 @@ def test_rule_violations_map_to_http_codes(client):
     assert client.post(f"/operator/auctions/{auction_id}/clear", headers=OP).status_code == 409  # window open
     assert client.get("/auctions/00000000-0000-0000-0000-000000000000").status_code == 404
     # a bid on a task that is not in the auction
-    assert client.put(bid_url(auction_id, str(uuid.uuid4())), json={"price": 1}, headers=ALICE).status_code == 422
-    assert client.put(bid_url(auction_id, task_id), json={"price": 1}, headers=ALICE).status_code == 204
+    assert client.put(bid_url(auction_id), json=bundles(str(uuid.uuid4()), 1), headers=ALICE).status_code == 422
+    assert client.put(bid_url(auction_id), json=bundles(task_id, 1), headers=ALICE).status_code == 204
+
+
+def test_the_operator_can_export_every_task_and_auction(client):
+    task_id = submit(client)
+    assert [t["task_id"] for t in client.get("/operator/tasks", headers=OP).json()] == [task_id]
+    assert client.get("/operator/auctions", headers=OP).json() == []
+    auction_id = client.post("/operator/auctions", headers=OP).json()[0]["auction_id"]
+    client.put(bid_url(auction_id), json=bundles(task_id, 10), headers=ALICE)
+    client.post(f"/operator/auctions/{auction_id}/clear?force=true", headers=OP)
+    (auction,) = client.get("/operator/auctions", headers=OP).json()
+    assert auction["outcome"]["awards"][0]["bidder_id"] == "alice"

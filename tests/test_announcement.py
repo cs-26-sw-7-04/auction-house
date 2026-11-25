@@ -19,7 +19,8 @@ def house():
     # One task per auction, so every submitted task opens its own auction.
     settings = Settings(
         _env_file=None,
-        bundler=ComponentSpec(name="batch", options={"size": 1}),
+        grouper=ComponentSpec(name="batch", options={"size": 1}),
+        solver=ComponentSpec(name="vcg_combinatorial", options={"algorithm": "2"}), # COMB_FAST_PIVOTS
         notifier=ComponentSpec(name="broadcast", options={"queue_size": 1}),
     )
     return build_house(settings)
