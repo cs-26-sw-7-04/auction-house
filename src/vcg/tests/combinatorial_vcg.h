@@ -414,7 +414,7 @@ TEST rand_comb_timing()
 	bool result = true;
 	bool too_slow[COMB_SOLVER_COUNT] = {false};
 	fprintf(out, "%6s, %6s, %8s,", "tasks", "bids", "bidders");
-	for (int s = 0; s < COMB_SOLVER_COUNT; s++) fprintf(out, " %18s", comb_solver_name((comb_solver) s));
+	for (int s = 0; s < COMB_SOLVER_COUNT; s++) fprintf(out, " %18s,", comb_solver_name((comb_solver) s));
 	fprintf(out, "%14s", "timestamp");
 	fprintf(out, "\n");
 	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
