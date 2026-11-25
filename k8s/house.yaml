@@ -106,7 +106,7 @@ stringData:
         "winona-key":   {"role": "bidder",    "id": "winona"},
         "xander-key":   {"role": "bidder",    "id": "xander"},
         "yvonne-key":   {"role": "bidder",    "id": "yvonne"},
-        "zack-key":     {"role": "bidder",    "id": "zack"}
+        "zack-key":     {"role": "bidder",    "id": "zack"}"
         }
 ---
 apiVersion: apps/v1
