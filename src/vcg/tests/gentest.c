@@ -65,7 +65,7 @@ typedef struct
 } files_t;
 files_t files = {0};
 
-char test_input_buffer[TEST_INPUT_BUFFER_SIZE];
+char test_input_buffer[TEST_INPUT_BUFFER_SIZE+1];
 functions funcarr = {0};
 
 
@@ -90,7 +90,7 @@ bool generate_tests(char* input_file, char* test_dir)
 	da_append(&files, file_to_include);
 	cursor cur = {0};
 	cur.line = 1;
-	bytes_read = fread(test_input_buffer, sizeof(char), sizeof(test_input_buffer), in);
+	bytes_read = fread(test_input_buffer, sizeof(char), TEST_INPUT_BUFFER_SIZE, in);
 	dstring str = {0};
 	bool parsing_function = false;
 	bool might_be_function = false;
@@ -109,7 +109,7 @@ bool generate_tests(char* input_file, char* test_dir)
 		}
 		if (cur.offset+1 > bytes_read)
 		{
-			bytes_read = fread(test_input_buffer, sizeof(char), sizeof(test_input_buffer), in);
+			bytes_read = fread(test_input_buffer, sizeof(char), TEST_INPUT_BUFFER_SIZE, in);
 			cur.offset = 0;
 			next_char = test_input_buffer[cur.offset];
 		}
@@ -125,7 +125,7 @@ bool generate_tests(char* input_file, char* test_dir)
 			}
 			if (cur.offset + 1 == bytes_read)
 			{
-				bytes_read = fread(test_input_buffer, sizeof(char), sizeof(test_input_buffer), in);
+				bytes_read = fread(test_input_buffer, sizeof(char), TEST_INPUT_BUFFER_SIZE, in);
 				cur.offset = 0;
 			
 			}
@@ -185,9 +185,11 @@ bool generate_tests(char* input_file, char* test_dir)
 		}
 		cur.col++;
 		cur.offset++;
+	
 		
 	}
-
+	free(str.items);
+	free(file_loc.items);
 	fclose(in);
 	return true;
 }
