@@ -4,7 +4,7 @@ kind: Simple
 metadata:
     name: auction
 servers: 1
-agents: 5
+agents: 26
 ports:
     - port: 7777:30777
       nodeFilters:
@@ -35,66 +35,66 @@ options:
             - label: auction/bidder=eli
               nodeFilters:
                   - agent:4
-#            - label: auction/bidder=frank
-#              nodeFilters:
-#                  - agent:5
-#            - label: auction/bidder=grace
-#              nodeFilters:
-#                  - agent:6
-#            - label: auction/bidder=henrik
-#              nodeFilters:
-#                  - agent:7
-#            - label: auction/bidder=irmgard
-#              nodeFilters:
-#                  - agent:8
-#            - label: auction/bidder=jakob
-#              nodeFilters:
-#                  - agent:9
-#            - label: auction/bidder=katrine
-#              nodeFilters:
-#                  - agent:10
-#            - label: auction/bidder=lars
-#              nodeFilters:
-#                  - agent:11
-#            - label: auction/bidder=michelle
-#              nodeFilters:
-#                  - agent:12
-#            - label: auction/bidder=nils
-#              nodeFilters:
-#                  - agent:13
-#            - label: auction/bidder=ophilia
-#              nodeFilters:
-#                  - agent:14
-#            - label: auction/bidder=peter
-#              nodeFilters:
-#                  - agent:15
-#            - label: auction/bidder=quinn
-#              nodeFilters:
-#                  - agent:16
-#            - label: auction/bidder=ronald
-#              nodeFilters:
-#                  - agent:17
-#            - label: auction/bidder=sarah
-#              nodeFilters:
-#                  - agent:18
-#            - label: auction/bidder=tobias
-#              nodeFilters:
-#                  - agent:19
-#            - label: auction/bidder=ursula
-#              nodeFilters:
-#                  - agent:20
-#            - label: auction/bidder=vickrey
-#              nodeFilters:
-#                  - agent:21
-#            - label: auction/bidder=winona
-#              nodeFilters:
-#                  - agent:22
-#            - label: auction/bidder=xander
-#              nodeFilters:
-#                  - agent:23
-#            - label: auction/bidder=yvonne
-#              nodeFilters:
-#                  - agent:24
-#            - label: auction/bidder=zack
-#              nodeFilters:
-#                  - agent:25
+            - label: auction/bidder=frank
+              nodeFilters:
+                  - agent:5
+            - label: auction/bidder=grace
+              nodeFilters:
+                  - agent:6
+            - label: auction/bidder=henrik
+              nodeFilters:
+                  - agent:7
+            - label: auction/bidder=irmgard
+              nodeFilters:
+                  - agent:8
+            - label: auction/bidder=jakob
+              nodeFilters:
+                  - agent:9
+            - label: auction/bidder=katrine
+              nodeFilters:
+                  - agent:10
+            - label: auction/bidder=lars
+              nodeFilters:
+                  - agent:11
+            - label: auction/bidder=michelle
+              nodeFilters:
+                  - agent:12
+            - label: auction/bidder=nils
+              nodeFilters:
+                  - agent:13
+            - label: auction/bidder=ophilia
+              nodeFilters:
+                  - agent:14
+            - label: auction/bidder=peter
+              nodeFilters:
+                  - agent:15
+            - label: auction/bidder=quinn
+              nodeFilters:
+                  - agent:16
+            - label: auction/bidder=ronald
+              nodeFilters:
+                  - agent:17
+            - label: auction/bidder=sarah
+              nodeFilters:
+                  - agent:18
+            - label: auction/bidder=tobias
+              nodeFilters:
+                  - agent:19
+            - label: auction/bidder=ursula
+              nodeFilters:
+                  - agent:20
+            - label: auction/bidder=vickrey
+              nodeFilters:
+                  - agent:21
+            - label: auction/bidder=winona
+              nodeFilters:
+                  - agent:22
+            - label: auction/bidder=xander
+              nodeFilters:
+                  - agent:23
+            - label: auction/bidder=yvonne
+              nodeFilters:
+                  - agent:24
+            - label: auction/bidder=zack
+              nodeFilters:
+                  - agent:25

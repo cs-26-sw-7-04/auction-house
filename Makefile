@@ -1,8 +1,8 @@
-NS      ?= auction
-CLUSTER ?= auction
-IMAGE   ?= auction-house:dev
-K8S_FILE ?= k8s/house.yaml
-K3D_CONFIG ?= k8s/k3d-config.yaml
+CLUSTER   ?= auction
+IMAGE     ?= auction
+TAG       ?= 1.0
+SIM_IMAGE ?= bidder-simulator
+K3S_IMAGE ?= rancher/k3s:v1.31.5-k3s1
 
 .DEFAULT_GOAL := run
 
@@ -31,8 +31,11 @@ cluster-check:        ## Check that the required cluster tools are installed
 	@docker info >/dev/null 2>&1   || (echo "Docker is not running" && exit 1)
 	@echo "All tools OK"
 
-cluster-create: cluster-check ## Create the local k3s cluster (skips if it exists)
-	@k3d cluster list | grep -q "^$(CLUSTER) " || k3d cluster create --config $(K3D_CONFIG)
+kup: kcheck            ## Create the local k3s cluster (skips if it exists)
+	@k3d cluster list | grep -q "^$(CLUSTER) " || k3d cluster create $(CLUSTER) \
+		--image $(K3S_IMAGE) \
+		--servers 1 --agents 1 \
+		--port "8080:80@loadbalancer"
 	@kubectl config use-context k3d-$(CLUSTER)
 	@kubectl get nodes
 
@@ -41,8 +44,8 @@ cluster-delete:       ## Delete the local cluster
 
 cluster-restart: cluster-delete cluster-create ## Recreate the cluster from scratch
 
-image-build:           ## Build the auction-house Docker image
-	docker build -t $(IMAGE) .
+kbuild:               ## Build the auction Docker image
+	docker build -t $(IMAGE):$(TAG) .
 
 image-import: image-build ## Import the image into the cluster
 	k3d image import $(IMAGE) -c $(CLUSTER)
