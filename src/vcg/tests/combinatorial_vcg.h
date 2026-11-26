@@ -789,15 +789,77 @@ TEST compare_to_simple_known_VCG_solution_5()
 		}
 		int lim = 0 + o.award_count;
 		for (int i = 0; i < lim; i++){
-			if (o.awards[i].bidder == 0 && o.awards[i].task == 3) continue;
-			if (o.awards[i].bidder == 1 && o.awards[i].task == 4) continue;
-			if (o.awards[i].bidder == 1 && o.awards[i].task == 0) continue;
-			if (o.awards[i].bidder == 2 && o.awards[i].task == 1) continue;
-			if (o.awards[i].bidder == 2 && o.awards[i].task == 2) continue;
+			if (o.awards[i].bidder == 0 && o.awards[i].task == 0) continue;
+			if (o.awards[i].bidder == 1 && o.awards[i].task == 1) continue;
+			if (o.awards[i].bidder == 1 && o.awards[i].task == 2) continue;
+			if (o.awards[i].bidder == 2 && o.awards[i].task == 3) continue;
+			if (o.awards[i].bidder == 2 && o.awards[i].task == 4) continue;
 			result = false;
 		}
 		
 
+	}
+	return result;
+}
+
+
+/* will generate file of the form "./tests/vcg_rand_comb_timing_{id}.csv" */
+bool run_rand_comb_timing(int id)
+{
+
+	char *output = calloc(40, sizeof(char));
+	snprintf(output, 40,"./tests/vcg_rand_comb_timing%d.csv", id);
+	FILE *out = fopen(output,"w");
+	static comb_auction a;
+	bool result = true;
+	bool too_slow[COMB_SOLVER_COUNT] = {false};
+	fprintf(out, "%6s, %6s, %8s,", "tasks", "bids", "bidders");
+	for (int s = 0; s < COMB_SOLVER_COUNT; s++) fprintf(out, " %18s,", comb_solver_name((comb_solver) s));
+	fprintf(out, "%14s", "timestamp");
+	fprintf(out, "\n");
+	for (size_t bids = 8; bids <= 256; bids += bids < 128 ? 8 : 32) {
+		size_t tasks = COMB_MAX_TASKS;
+		int bidders = (int) bids / 3;
+		comb_rng = rand() + bids;
+		comb_random_auction(&a, tasks, bids, bidders, 4);
+		fprintf(out, "%6zu, %6zu, %8d,", tasks, bids, bidders);
+		comb_outcome reference = {0};
+		bool have_reference = false;
+		for (int s = 0; s < COMB_SOLVER_COUNT; s++) {
+			if ( (too_slow[s] && s != COMB_SOLVER_COUNT-1 && s != COMB_SOLVER_COUNT -2)) {
+				fprintf(out, " %18s,", "skipped");
+				continue;
+			}
+			double start = comb_seconds();
+			comb_outcome o = vcg_comb_clear(a.values, a.task_count, a.bids, a.bid_count, (comb_solver) s);
+			double took = comb_seconds() - start;
+			fprintf(out, " %17.6fs,", took);
+			if (took > 2.0) too_slow[s] = true;
+			if (!have_reference) {
+				reference = o;
+				have_reference = true;
+				result &= comb_check_properties(&a, o);
+			} else {
+				result &= comb_same_outcome(reference, o);
+				comb_outcome_free(&o);
+			}
+		}
+		time_t cur_time = time(NULL);
+		fprintf(out, "%30s", ctime(&cur_time));
+		comb_outcome_free(&reference);
+		fflush(stdout);
+	}
+	fclose(out);
+	free(output);
+	return result;
+}
+
+
+TEST run_multiple_random_auctions()
+{
+	bool result = true;
+	for (int i = 0; i < 10; i++){
+		result = run_rand_comb_timing(i);
 	}
 	return result;
 }
