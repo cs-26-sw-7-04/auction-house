@@ -17,7 +17,7 @@ def _clear(
 
         if pivot:
             # Clarke pivot: the winner's marginal contribution to welfare.
-            # The exclusion happens inside the solver, not by filtering `bids` here.
+            # The exclusion happens inside the solver, not by filtering bids here.
             without = solver.solve(values, bids, exclude=bidder_id)
             payment += best.welfare - without.welfare
 

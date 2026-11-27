@@ -1,5 +1,5 @@
 """The auction house: the one place where the flow of an auction is written down.
- 
+
 It owns no storage and makes no assumptions about how auctions are cleared or
 tasks run; everything it needs comes in as a port (see `ports.py`).
 """

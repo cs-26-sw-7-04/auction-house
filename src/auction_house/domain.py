@@ -1,7 +1,4 @@
-"""The vocabulary of the auction house: plain data and the errors it raises.
-
-Nothing here knows about HTTP, Kubernetes or any particular solver.
-"""
+"""The vocabulary of the auction house: plain data and the errors it raises."""
 import datetime
 import enum
 import uuid

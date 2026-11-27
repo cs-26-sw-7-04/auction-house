@@ -1,9 +1,4 @@
-"""The interfaces (ports) the auction house is built from.
-
-Each is a `Protocol`: a component only has to have the right methods, it does
-not inherit from anything. Components are chosen by name in `plugins.py`, so
-swapping one is a configuration change.
-"""
+"""The interfaces (ports) the auction house is built from."""
 import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import AbstractContextManager
