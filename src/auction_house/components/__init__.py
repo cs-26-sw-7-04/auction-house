@@ -7,6 +7,7 @@ from auction_house.components import (  # noqa: F401
     notifiers,
     settlement,
     solver_per_task,
+    solver_random,
     solver_vcg_combinatorial,
     stores,
 )
